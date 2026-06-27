@@ -1,7 +1,6 @@
 // functions/[[path]].js
 
-const TMDB_API_KEY = "YOUR_TMDB_API_KEY_HERE"; // <--- PUT YOUR KEY HERE
-
+9e14731cf09b714603421a3f173df8fb
 const manifest = {
     id: "community.snakeeyes.catalog",
     version: "1.0.0",
