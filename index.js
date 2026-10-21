@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.9 — American-only categories, restored franchise collections, trailer support
+// v3.10 — US/English filters, 1980+ only for movie/TV categories, removed old John Wayne/Asian broad results
 
 const express = require('express');
 const cors = require('cors');
@@ -14,9 +14,9 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.9.0',
+    version: '3.10.0',
     name: 'Snakeeyes Catalog',
-    description: 'American Movies, TV Shows, Decades, Kids, Horror, Drama, Comedy, Documentaries, and Franchises.',
+    description: '1980s-2000s American Movies, TV Shows, Kids, Horror, Drama, Comedy, Documentaries, and Franchises.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie', 'series'],
@@ -62,23 +62,23 @@ const manifest = {
 const catalogConfig = {
     'snakeeyes-popular': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&sort_by=popularity.desc',
-        fallbackQueries: ['American movies', 'popular American films']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=1980-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American movies 1980s', 'popular American films 1980s']
     },
     'snakeeyes-award': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&sort_by=vote_average.desc&vote_count.gte=100',
-        fallbackQueries: ['award winning American movies', 'classic American films']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=1980-01-01&sort_by=vote_average.desc&vote_count.gte=100',
+        fallbackQueries: ['award winning American movies 1980s', 'classic American films']
     },
     'snakeeyes-kids': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&certification_country=US&certification.lte=G&with_original_language=en&region=US&with_genres=16,10751&sort_by=popularity.desc',
-        fallbackQueries: ['Disney movies', 'American family movies', 'kids movies', '90s family movies']
+        endpoint: 'discover/movie?include_adult=false&certification_country=US&certification.lte=G&with_original_language=en&region=US&with_genres=16,10751&release_date.gte=1980-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['Disney movies 1980s', 'American family movies 1980s', 'kids movies 1990s']
     },
     'snakeeyes-docs': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&sort_by=popularity.desc',
-        fallbackQueries: ['American documentary films', 'history documentary', 'nature documentary']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&release_date.gte=1980-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American documentary films 1980s', 'history documentary 1990s', 'nature documentary 2000s']
     },
     'snakeeyes-80s': {
         type: 'discover',
@@ -97,31 +97,31 @@ const catalogConfig = {
     },
     'snakeeyes-drama': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=18',
-        fallbackQueries: ['American drama series', 'best American drama shows', 'award drama series']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=18',
+        fallbackQueries: ['American drama series 1980s', 'best American drama shows 1990s', 'award drama series 2000s']
     },
     'snakeeyes-comedy': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=35',
-        fallbackQueries: ['American comedy series', 'funny American shows', 'sitcoms']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=35',
+        fallbackQueries: ['American comedy series 1980s', 'funny American shows 1990s', 'sitcoms 2000s']
     },
     'snakeeyes-horror-tv': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=27',
-        fallbackQueries: ['American horror series', 'American scary shows', 'American supernatural horror series']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=27',
+        fallbackQueries: ['American horror series 1980s', 'American scary shows 1990s', 'American supernatural horror series 2000s']
     },
     'snakeeyes-supernatural': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=27,10765',
-        fallbackQueries: ['American supernatural horror shows', 'American paranormal series', 'American haunted shows']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=27,10765',
+        fallbackQueries: ['American supernatural horror shows 1980s', 'American paranormal series 1990s', 'American haunted shows 2000s']
     },
     'snakeeyes-nolan': { type: 'person_movies', personId: '525' },
     'snakeeyes-tarantino': { type: 'person_movies', personId: '138' },
     'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&sort_by=popularity.desc',
-        fallbackQueries: ['American horror movies', 'American scary movies', 'supernatural horror movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&release_date.gte=1980-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American horror movies 1980s', 'American scary movies 1990s', 'supernatural horror movies 2000s']
     },
     'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
     'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
@@ -143,6 +143,19 @@ const catalogConfig = {
     'snakeeyes-batman-tv': { type: 'search_tv', queries: ['Batman The Animated Series', 'The Batman', 'Batman Beyond', 'Gotham', 'Batwoman', 'Batman Caped Crusader'] },
     'snakeeyes-superman-tv': { type: 'search_tv', queries: ['Superman The Animated Series', 'Smallville', 'Superman and Lois', 'My Adventures with Superman'] }
 };
+
+function cleanTitleForUsOnly(item) {
+    if (!item) return null;
+    const title = item.title || item.name || item.original_title || item.original_name || '';
+    const originalLang = (item.original_language || '').toLowerCase();
+    const originCountry = Array.isArray(item.origin_country) ? item.origin_country.map(c => (c || '').toUpperCase()) : [];
+    const hasUsOrigin = originCountry.includes('US');
+    const isEnglish = originalLang === 'en' || title.includes('John Wayne');
+    if (!title || title === 'Unknown') return null;
+    if (isEnglish && !hasUsOrigin) return item;
+    if (hasUsOrigin) return item;
+    return null;
+}
 
 function normalizeTitle(item) {
     return item.title || item.name || item.original_title || item.original_name || 'Unknown';
@@ -244,7 +257,8 @@ async function fetchMetas(catalogId, type) {
             console.warn(`Discover fetch failed for ${catalogId}:`, err.message);
         }
 
-        let metas = type === 'series' ? results.map(tvToMeta) : results.map(movieToMeta);
+        const filtered = results.filter(item => cleanTitleForUsOnly(item));
+        let metas = type === 'series' ? filtered.map(tvToMeta) : filtered.map(movieToMeta);
         let deduped = dedupeMetas(metas);
         if (deduped.length > 0) return deduped;
 
@@ -254,9 +268,11 @@ async function fetchMetas(catalogId, type) {
             for (const query of config.fallbackQueries) {
                 try {
                     const endpoint = type === 'series' ? 'search/tv' : 'search/movie';
-                    const data = await fetchTmdb(endpoint, { query, include_adult: false, region: 'US' });
+                    const data = await fetchTmdb(endpoint, { query, include_adult: false, region: 'US', language: 'en-US' });
                     const items = Array.isArray(data.results) ? data.results : [];
                     for (const item of items) {
+                        const isUsRelevant = cleanTitleForUsOnly(item);
+                        if (!isUsRelevant) continue;
                         const meta = type === 'series' ? tvToMeta(item) : movieToMeta(item);
                         if (!meta || !meta.id || seen.has(meta.id)) continue;
                         seen.add(meta.id);
@@ -276,7 +292,8 @@ async function fetchMetas(catalogId, type) {
         try {
             const data = await fetchTmdb(`collection/${config.collectionId}`);
             const parts = Array.isArray(data.parts) ? data.parts : [];
-            const mapped = parts.map(movieToMeta);
+            const filtered = parts.filter(item => cleanTitleForUsOnly(item));
+            const mapped = filtered.map(movieToMeta);
             const deduped = dedupeMetas(mapped);
             if (deduped.length > 0) return deduped;
         } catch (err) {
@@ -287,9 +304,12 @@ async function fetchMetas(catalogId, type) {
             const queryResults = [];
             for (const query of config.fallbackQueries) {
                 try {
-                    const data = await fetchTmdb('search/movie', { query, include_adult: false, region: 'US' });
+                    const data = await fetchTmdb('search/movie', { query, include_adult: false, region: 'US', language: 'en-US' });
                     const items = Array.isArray(data.results) ? data.results : [];
-                    queryResults.push(...items);
+                    for (const item of items) {
+                        if (!cleanTitleForUsOnly(item)) continue;
+                        queryResults.push(item);
+                    }
                 } catch (err) {
                     console.warn(`Fallback movie search failed for ${catalogId}:`, err.message);
                 }
@@ -305,7 +325,8 @@ async function fetchMetas(catalogId, type) {
         const data = await fetchTmdb(`person/${config.personId}/movie_credits`);
         const cast = Array.isArray(data.crew) ? data.crew : Array.isArray(data.cast) ? data.cast : [];
         cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-        const mapped = cast.slice(0, 20).map(movieToMeta);
+        const filtered = cast.filter(item => cleanTitleForUsOnly(item));
+        const mapped = filtered.slice(0, 20).map(movieToMeta);
         return dedupeMetas(mapped);
     }
 
@@ -313,7 +334,8 @@ async function fetchMetas(catalogId, type) {
         const data = await fetchTmdb(`person/${config.personId}/tv_credits`);
         const cast = Array.isArray(data.cast) ? data.cast : [];
         cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-        const mapped = cast.slice(0, 20).map(tvToMeta);
+        const filtered = cast.filter(item => cleanTitleForUsOnly(item));
+        const mapped = filtered.slice(0, 20).map(tvToMeta);
         return dedupeMetas(mapped);
     }
 
@@ -323,9 +345,10 @@ async function fetchMetas(catalogId, type) {
 
         for (const query of config.queries || []) {
             try {
-                const data = await fetchTmdb('search/tv', { query, include_adult: false, region: 'US' });
+                const data = await fetchTmdb('search/tv', { query, include_adult: false, region: 'US', language: 'en-US' });
                 const items = Array.isArray(data.results) ? data.results : [];
                 for (const item of items) {
+                    if (!cleanTitleForUsOnly(item)) continue;
                     const meta = tvToMeta(item);
                     if (!meta || !meta.id || seen.has(meta.id)) continue;
                     seen.add(meta.id);
@@ -360,7 +383,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>American movies, TV shows, kids, docs, horror, drama, comedy, supernatural horror, and franchise collections.</p>
+  <p>American 1980s-2000s movies, kids, horror, drama, comedy, documentaries, and franchise picks.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
@@ -466,6 +489,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.9 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.10 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
