@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.15 — franchise-only catalog cleanup, no series categories, no duplicate entries
+// v3.16 — franchise-only catalog with this-year popular/horror, no series, no Wrong Turn duplicates
 
 const express = require('express');
 const cors = require('cors');
@@ -11,23 +11,24 @@ app.use(cors());
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+const CURRENT_YEAR = new Date().getFullYear();
+const CURRENT_YEAR_START = `${CURRENT_YEAR}-01-01`;
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.15.0',
+    version: '3.16.0',
     name: 'Snakeeyes Catalog',
-    description: 'Franchise-focused movie catalog featuring Spider-Man, Avengers, Jurassic Park, Godzilla, Wrong Turn, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child\'s Play, and horror picks.',
+    description: 'This year popular movies and franchise collections including Spider-Man, Avengers, Jurassic Park, Godzilla, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child\'s Play, and current horror picks.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
-        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies' },
+        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies This Year' },
         { type: 'movie', id: 'snakeeyes-spiderman', name: '🕷️ Spider-Man Collection' },
         { type: 'movie', id: 'snakeeyes-avengers', name: '🦸 Avengers Collection' },
         { type: 'movie', id: 'snakeeyes-jurassic', name: '🦖 Jurassic Park Collection' },
         { type: 'movie', id: 'snakeeyes-godzilla', name: '🐲 Godzilla Collection' },
-        { type: 'movie', id: 'snakeeyes-wrongturn', name: '🩸 Wrong Turn Collection' },
         { type: 'movie', id: 'snakeeyes-conjuring', name: '👻 The Conjuring Collection' },
         { type: 'movie', id: 'snakeeyes-saw', name: '🔪 Saw Collection' },
         { type: 'movie', id: 'snakeeyes-terminator', name: '🤖 Terminator Collection' },
@@ -36,21 +37,20 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-moana', name: '🌊 Moana Collection' },
         { type: 'movie', id: 'snakeeyes-candyman', name: '🩸 Candyman Collection' },
         { type: 'movie', id: 'snakeeyes-childsplay', name: '🤖 Child\'s Play Collection' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Horror Movies' }
+        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Popular Horror This Year' }
     ]
 };
 
 const catalogConfig = {
     'snakeeyes-popular': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&sort_by=popularity.desc&release_date.gte=2015-01-01',
-        fallbackQueries: ['popular movies 2024', 'latest blockbuster movies', 'most popular action movies']
+        endpoint: `discover/movie?include_adult=false&sort_by=popularity.desc&release_date.gte=${CURRENT_YEAR_START}`,
+        fallbackQueries: ['popular movies this year', 'latest blockbuster movies', 'popular action movies now']
     },
     'snakeeyes-spiderman': { type: 'search_movie', queries: ['Spider-Man', 'Spider-Man: Homecoming', 'Spider-Man: Far From Home', 'Spider-Man: No Way Home', 'The Amazing Spider-Man'] },
     'snakeeyes-avengers': { type: 'search_movie', queries: ['Avengers', 'The Avengers', 'Avengers: Infinity War', 'Avengers: Endgame', 'Captain America: The First Avenger'] },
     'snakeeyes-jurassic': { type: 'search_movie', queries: ['Jurassic Park', 'Jurassic World', 'The Lost World: Jurassic Park', 'Jurassic World Dominion', 'Jurassic Park III'] },
     'snakeeyes-godzilla': { type: 'search_movie', queries: ['Godzilla', 'Godzilla: King of the Monsters', 'Godzilla vs. Kong', 'Godzilla 1985', 'Godzilla: Tokyo SOS'] },
-    'snakeeyes-wrongturn': { type: 'search_movie', queries: ['Wrong Turn', 'Wrong Turn 2', 'Wrong Turn 3', 'Wrong Turn 4', 'Wrong Turn 5'] },
     'snakeeyes-conjuring': { type: 'search_movie', queries: ['The Conjuring', 'The Conjuring 2', 'The Conjuring: The Devil Made Me Do It', 'Annabelle', 'The Nun'] },
     'snakeeyes-saw': { type: 'search_movie', queries: ['Saw', 'Saw 2', 'Saw 3', 'Saw 4', 'Saw 5', 'Saw X'] },
     'snakeeyes-terminator': { type: 'search_movie', queries: ['The Terminator', 'Terminator 2: Judgment Day', 'Terminator 3', 'Terminator Genisys', 'Terminator: Dark Fate'] },
@@ -61,8 +61,8 @@ const catalogConfig = {
     'snakeeyes-childsplay': { type: 'search_movie', queries: ['Child\'s Play', 'Child\'s Play 2', 'Child\'s Play 3', 'Bride of Chucky', 'Seed of Chucky'] },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc&release_date.gte=2010-01-01',
-        fallbackQueries: ['modern horror movies', 'popular horror films', 'best horror movies']
+        endpoint: `discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc&release_date.gte=${CURRENT_YEAR_START}`,
+        fallbackQueries: ['popular horror movies this year', 'new horror movies', 'scary movie hits now']
     }
 };
 
@@ -239,17 +239,16 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Franchise movie collections only, including popular hits and the specific movie series you wanted.</p>
+  <p>Popular movies this year and franchise collections only.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>Included Collections:</h3>
     <ul>
-      <li>🎬 Popular Movies</li>
+      <li>🎬 Popular Movies This Year</li>
       <li>🕷️ Spider-Man Collection</li>
       <li>🦸 Avengers Collection</li>
       <li>🦖 Jurassic Park Collection</li>
       <li>🐲 Godzilla Collection</li>
-      <li>🩸 Wrong Turn Collection</li>
       <li>👻 The Conjuring Collection</li>
       <li>🔪 Saw Collection</li>
       <li>🤖 Terminator Collection</li>
@@ -258,7 +257,7 @@ app.get('/', (req, res) => {
       <li>🌊 Moana Collection</li>
       <li>🩸 Candyman Collection</li>
       <li>🤖 Child's Play Collection</li>
-      <li>👻 Horror Movies</li>
+      <li>👻 Popular Horror This Year</li>
     </ul>
   </div>
 </body>
@@ -337,6 +336,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.15 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.16 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
