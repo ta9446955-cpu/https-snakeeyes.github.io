@@ -103,12 +103,50 @@ const catalogConfig = {
     "snakeeyes-superman":       { type: "collection", collectionId: "863151" },  // Superman Legacy collection; fallback to discover below
     "snakeeyes-batman":         { type: "collection", collectionId: "948485" },  // Batman Collection
     // TV Franchise shows — searched by name since TMDB has no single collection for TV
-    "snakeeyes-starwars-tv":    { type: "search_tv", queries: ["The Mandalorian", "Andor", "Obi-Wan Kenobi", "The Book of Boba Fett", "Ahsoka", "Star Wars The Clone Wars", "Star Wars Rebels", "The Acolyte"] },
+    "snakeeyes-starwars-tv":    { type: "search_tv", queries: ["The Mandalorian", "Andor", "Obi-Wan Kenobi", "The Book of Boba Fett", "Ahsoka", "Star Wars The Clone Wars", "Star Wars Rebels", "The Bad Batch", "Star Wars: Young Jedi Adventures"] },
     "snakeeyes-xmen-tv":        { type: "search_tv", queries: ["X-Men The Animated Series", "X-Men Evolution", "Wolverine and the X-Men", "X-Men 97"] },
     "snakeeyes-transformers-tv":{ type: "search_tv", queries: ["Transformers Generation 1", "Transformers Animated", "Transformers Prime", "Transformers Robots in Disguise", "Transformers Cyberverse"] },
     "snakeeyes-batman-tv":      { type: "search_tv", queries: ["Batman The Animated Series", "The Batman", "Batman Beyond", "Gotham", "Batwoman", "Batman Caped Crusader"] },
     "snakeeyes-superman-tv":    { type: "search_tv", queries: ["Superman The Animated Series", "Smallville", "Superman and Lois", "My Adventures with Superman"] }
 };
+
+function normalizeTitle(item) {
+    return item.title || item.name || item.original_title || item.original_name || 'Unknown';
+}
+
+function normalizeOverview(item) {
+    return item.overview || item.tagline || '';
+}
+
+function extractTrailerUrl(detail) {
+    const videos = detail && detail.videos && Array.isArray(detail.videos.results) ? detail.videos.results : [];
+    if (!videos.length) return null;
+
+    const trailer = videos.find(v => (v.type || '').toLowerCase() === 'trailer' && (v.site || '').toLowerCase() === 'youtube')
+        || videos.find(v => (v.site || '').toLowerCase() === 'youtube')
+        || videos[0];
+
+    if (!trailer || !trailer.key) return null;
+    return `https://www.youtube.com/watch?v=${trailer.key}`;
+}
+
+function buildVideoList(detail, type) {
+    const trailerUrl = extractTrailerUrl(detail);
+    if (!trailerUrl) return [];
+
+    const releaseDate = detail.release_date || detail.first_air_date || '';
+    return [{
+        id: 'trailer',
+        title: 'Trailer',
+        released: releaseDate,
+        type: type === 'series' ? 'series' : 'movie',
+        streams: [{
+            url: trailerUrl,
+            title: 'Trailer',
+            behaviorHints: { bingeGroup: 'trailer' }
+        }]
+    }];
+}
 
 // Helper: build proper Stremio ID
 function buildId(item) {
@@ -121,10 +159,10 @@ function movieToMeta(item) {
     return {
         id: buildId(item),
         type: "movie",
-        name: item.title || item.name || 'Unknown',
+        name: normalizeTitle(item),
         poster: item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null,
         background: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
-        description: item.overview || ''
+        description: normalizeOverview(item)
     };
 }
 
@@ -133,10 +171,10 @@ function tvToMeta(item) {
     return {
         id: buildId(item),
         type: "series",
-        name: item.name || item.title || 'Unknown',
+        name: normalizeTitle(item),
         poster: item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null,
         background: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
-        description: item.overview || ''
+        description: normalizeOverview(item)
     };
 }
 
@@ -284,7 +322,7 @@ app.get('/meta/:type/:id.json', async (req, res) => {
 
         if (id.startsWith('tmdb:')) {
             const tmdbId = id.replace('tmdb:', '');
-            const r = await fetch(`${TMDB_BASE}/${mediaType}/${tmdbId}?${key}`);
+            const r = await fetch(`${TMDB_BASE}/${mediaType}/${tmdbId}?append_to_response=videos&${key}`);
             detail = await r.json();
         } else if (/^tt\d+$/.test(id)) {
             const findR = await fetch(`${TMDB_BASE}/find/${id}?${key}&external_source=imdb_id`);
@@ -293,26 +331,29 @@ app.get('/meta/:type/:id.json', async (req, res) => {
             if (mediaType === 'movie' && findData.movie_results?.length > 0) tmdbId = findData.movie_results[0].id;
             else if (mediaType === 'tv' && findData.tv_results?.length > 0) tmdbId = findData.tv_results[0].id;
             if (tmdbId) {
-                const r = await fetch(`${TMDB_BASE}/${mediaType}/${tmdbId}?${key}`);
+                const r = await fetch(`${TMDB_BASE}/${mediaType}/${tmdbId}?append_to_response=videos&${key}`);
                 detail = await r.json();
             }
         }
 
         if (!detail || detail.success === false) return res.json({ meta: {} });
 
-        res.json({
-            meta: {
-                id,
-                type,
-                name: detail.title || detail.name || '',
-                poster: detail.poster_path ? `https://image.tmdb.org/t/p/w500${detail.poster_path}` : null,
-                background: detail.backdrop_path ? `https://image.tmdb.org/t/p/w1280${detail.backdrop_path}` : null,
-                description: detail.overview || '',
-                releaseInfo: (detail.release_date || detail.first_air_date || '').split('-')[0],
-                runtime: type === 'movie' && detail.runtime ? `${detail.runtime} min` : null,
-                imdbRating: detail.vote_average ? detail.vote_average.toFixed(1) : null
-            }
-        });
+        const trailerUrl = extractTrailerUrl(detail);
+        const meta = {
+            id,
+            type,
+            name: normalizeTitle(detail),
+            poster: detail.poster_path ? `https://image.tmdb.org/t/p/w500${detail.poster_path}` : null,
+            background: detail.backdrop_path ? `https://image.tmdb.org/t/p/w1280${detail.backdrop_path}` : null,
+            description: normalizeOverview(detail),
+            releaseInfo: (detail.release_date || detail.first_air_date || '').split('-')[0],
+            runtime: type === 'movie' && detail.runtime ? `${detail.runtime} min` : null,
+            imdbRating: detail.vote_average ? detail.vote_average.toFixed(1) : null,
+            trailer: trailerUrl,
+            videos: buildVideoList(detail, type)
+        };
+
+        res.json({ meta });
     } catch (err) {
         console.error('Meta error:', err.message);
         res.json({ meta: {} });
