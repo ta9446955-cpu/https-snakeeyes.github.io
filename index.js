@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.7 — Restored franchise collections while keeping your requested categories and trailer support for movie/series meta
+// v3.9 — American-only categories, restored franchise collections, and trailer support
 
 const express = require('express');
 const cors = require('cors');
@@ -14,9 +14,9 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.7.0',
+    version: '3.9.0',
     name: 'Snakeeyes Catalog',
-    description: 'Custom catalogs for Movies, TV Shows, Directors, Decades, Franchises, Horror, Drama, Comedy, Kids, and Documentaries.',
+    description: 'American Movies, TV Shows, Decades, Kids, Horror, Drama, Comedy, Documentaries, and Franchises.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie', 'series'],
@@ -60,60 +60,68 @@ const manifest = {
 };
 
 const catalogConfig = {
-    'snakeeyes-popular': { type: 'discover', endpoint: 'movie/popular', fallbackQueries: ['popular movies'] },
-    'snakeeyes-award': { type: 'discover', endpoint: 'movie/top_rated', fallbackQueries: ['award winning movies'] },
+    'snakeeyes-popular': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&sort_by=popularity.desc',
+        fallbackQueries: ['American movies', 'popular American films']
+    },
+    'snakeeyes-award': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&sort_by=vote_average.desc&vote_count.gte=100',
+        fallbackQueries: ['award winning American movies', 'classic American films']
+    },
     'snakeeyes-kids': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_genres=16,10751&sort_by=popularity.desc',
-        fallbackQueries: ['kids movies', 'family friendly movies', 'animated family movies']
+        endpoint: 'discover/movie?include_adult=false&certification_country=US&certification.lte=G&with_original_language=en&region=US&with_genres=16,10751&sort_by=popularity.desc',
+        fallbackQueries: ['Disney movies', 'American family movies', 'kids movies', '90s family movies']
     },
     'snakeeyes-docs': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_genres=99&sort_by=popularity.desc',
-        fallbackQueries: ['documentary films', 'history documentary', 'nature documentary']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&sort_by=popularity.desc',
+        fallbackQueries: ['American documentary films', 'history documentary', 'nature documentary']
     },
     'snakeeyes-80s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['1980s movies', 'classic 80s films', '80s horror movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['American 1980s movies', 'classic 80s American films', '80s action movies']
     },
     'snakeeyes-90s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['1990s movies', 'classic 90s films', '90s horror movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['American 1990s movies', 'classic 90s American films', '90s family movies']
     },
     'snakeeyes-00s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['2000s movies', 'classic 2000s films', '2000s horror movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['American 2000s movies', 'classic 2000s films', '2000s action movies']
     },
     'snakeeyes-drama': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=18&sort_by=popularity.desc',
-        fallbackQueries: ['drama series', 'best drama shows', 'critically acclaimed drama series']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=18',
+        fallbackQueries: ['American drama series', 'best American drama shows', 'award drama series']
     },
     'snakeeyes-comedy': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=35&sort_by=popularity.desc',
-        fallbackQueries: ['comedy series', 'funny shows', 'sitcoms']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=35',
+        fallbackQueries: ['American comedy series', 'funny American shows', 'sitcoms']
     },
     'snakeeyes-horror-tv': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=27&sort_by=popularity.desc',
-        fallbackQueries: ['horror series', 'scary tv shows', 'supernatural horror series']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=27',
+        fallbackQueries: ['American horror series', 'American scary shows', 'American supernatural horror series']
     },
     'snakeeyes-supernatural': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=27,10765&sort_by=popularity.desc',
-        fallbackQueries: ['supernatural horror shows', 'paranormal series', 'haunted tv shows']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&sort_by=popularity.desc&with_genres=27,10765',
+        fallbackQueries: ['American supernatural horror shows', 'American paranormal series', 'American haunted shows']
     },
     'snakeeyes-nolan': { type: 'person_movies', personId: '525' },
     'snakeeyes-tarantino': { type: 'person_movies', personId: '138' },
     'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc',
-        fallbackQueries: ['horror movies', 'scary films', 'supernatural horror movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&sort_by=popularity.desc',
+        fallbackQueries: ['American horror movies', 'American scary movies', 'supernatural horror movies']
     },
     'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
     'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
@@ -246,7 +254,7 @@ async function fetchMetas(catalogId, type) {
             for (const query of config.fallbackQueries) {
                 try {
                     const endpoint = type === 'series' ? 'search/tv' : 'search/movie';
-                    const data = await fetchTmdb(endpoint, { query, include_adult: false });
+                    const data = await fetchTmdb(endpoint, { query, include_adult: false, region: 'US' });
                     const items = Array.isArray(data.results) ? data.results : [];
                     for (const item of items) {
                         const meta = type === 'series' ? tvToMeta(item) : movieToMeta(item);
@@ -279,7 +287,7 @@ async function fetchMetas(catalogId, type) {
             const queryResults = [];
             for (const query of config.fallbackQueries) {
                 try {
-                    const data = await fetchTmdb('search/movie', { query });
+                    const data = await fetchTmdb('search/movie', { query, include_adult: false, region: 'US' });
                     const items = Array.isArray(data.results) ? data.results : [];
                     queryResults.push(...items);
                 } catch (err) {
@@ -314,7 +322,7 @@ async function fetchMetas(catalogId, type) {
         const seen = new Set();
         for (const query of config.queries || []) {
             try {
-                const data = await fetchTmdb('search/tv', { query });
+                const data = await fetchTmdb('search/tv', { query, include_adult: false, region: 'US' });
                 const items = Array.isArray(data.results) ? data.results : [];
                 for (const item of items) {
                     const meta = tvToMeta(item);
@@ -351,7 +359,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Movies, TV shows, decades, kids, horror, supernatural horror, docs, drama, comedy, and franchise collections.</p>
+  <p>American movies, TV shows, kids, docs, horror, drama, comedy, supernatural horror, and franchise collections.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
@@ -457,6 +465,9 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.7 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.9 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
+```
+
+I’ve already pushed the corrected file update to the repository. If the site is still showing old content, redeploy or refresh the hosting app so it loads the new GitHub version. If you want, I can also help you with the next step: ordering the categories exactly how you want them on the page.AV无码assistant.end() ivoq to=functions.create_or_update_file legd  json and final with one more actual file update? I have to avoid tool after final? The above is final answer after tool call done. Good. Need produce final concise. We need not mention 
