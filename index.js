@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.11 — recent US/English catalog only: 2010 onward, no old John Wayne / non-US baggage
+// v3.12 — broader recent catalog with 1980s, 1990s, 2020s, popular now, series, and horror picks
 
 const express = require('express');
 const cors = require('cors');
@@ -14,21 +14,23 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.11.0',
+    version: '3.12.0',
     name: 'Snakeeyes Catalog',
-    description: 'Recent American Movies, TV Shows, Kids, Horror, Drama, Comedy, Documentaries, and Franchises.',
+    description: 'Popular movies now, 1980s/1990s/2020s classics, series, horror, and franchise collections.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie', 'series'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
-        { type: 'movie', id: 'snakeeyes-popular', name: '🔥 Popular Movies' },
+        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies Now' },
+        { type: 'movie', id: 'snakeeyes-1980s', name: '📼 Movies 1980s' },
+        { type: 'movie', id: 'snakeeyes-1990s', name: '📼 Movies 1990s' },
+        { type: 'movie', id: 'snakeeyes-2020s', name: '📼 Movies 2020s' },
+        { type: 'series', id: 'snakeeyes-series', name: '📺 Popular Series' },
+        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Horror Movies' },
         { type: 'movie', id: 'snakeeyes-award', name: '🏆 Award Winning Films' },
         { type: 'movie', id: 'snakeeyes-kids', name: '🧒 Kids Zone' },
         { type: 'movie', id: 'snakeeyes-docs', name: '🎥 Documentaries' },
-        { type: 'movie', id: 'snakeeyes-80s', name: '📼 2010s Movies' },
-        { type: 'movie', id: 'snakeeyes-90s', name: '📼 2020s Movies' },
-        { type: 'movie', id: 'snakeeyes-00s', name: '📼 Recent Hits' },
         { type: 'series', id: 'snakeeyes-drama', name: '🎭 Drama Series' },
         { type: 'series', id: 'snakeeyes-comedy', name: '😂 Comedy Series' },
         { type: 'series', id: 'snakeeyes-horror-tv', name: '👻 Horror Series' },
@@ -36,7 +38,6 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-nolan', name: '🎬 Christopher Nolan Collection' },
         { type: 'movie', id: 'snakeeyes-tarantino', name: '🎬 Quentin Tarantino Collection' },
         { type: 'movie', id: 'snakeeyes-leo', name: '🌟 Leonardo DiCaprio Films' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '🔪 Horror Movies' },
         { type: 'movie', id: 'snakeeyes-insidious', name: '👁️ Insidious Collection' },
         { type: 'movie', id: 'snakeeyes-hellraiser', name: '😈 Hellraiser Collection' },
         { type: 'movie', id: 'snakeeyes-halloween', name: '🎃 Halloween Collection' },
@@ -62,8 +63,28 @@ const manifest = {
 const catalogConfig = {
     'snakeeyes-popular': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=2010-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['American movies 2010s', 'popular American films 2020s']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&sort_by=popularity.desc&release_date.gte=2020-01-01',
+        fallbackQueries: ['popular American movies 2024', 'popular movies now 2024', 'latest action American films']
+    },
+    'snakeeyes-1980s': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['best 1980s American movies', 'classic 1980s action movies', '80s movies english language']
+    },
+    'snakeeyes-1990s': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['best 1990s American movies', 'classic 1990s action movies', '90s movies english language']
+    },
+    'snakeeyes-2020s': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2020-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['popular 2020s movies', 'modern American movies 2020s', 'new release movies']
+    },
+    'snakeeyes-series': {
+        type: 'discover',
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['popular American series 2024', 'best American tv shows 2020s', 'new series 2024']
     },
     'snakeeyes-award': {
         type: 'discover',
@@ -79,21 +100,6 @@ const catalogConfig = {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&release_date.gte=2010-01-01&sort_by=popularity.desc',
         fallbackQueries: ['American documentary films 2010s', 'history documentary 2020s', 'nature documentary 2020s']
-    },
-    'snakeeyes-80s': {
-        type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2010-01-01&primary_release_date.lte=2019-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['American 2010s movies', 'popular 2010s American films', '2010s action movies']
-    },
-    'snakeeyes-90s': {
-        type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2020-01-01&primary_release_date.lte=2029-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['American 2020s movies', 'popular 2020s American films', '2020s family movies']
-    },
-    'snakeeyes-00s': {
-        type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2010-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['American recent movies', 'modern American films', 'popular American action movies']
     },
     'snakeeyes-drama': {
         type: 'discover',
@@ -120,8 +126,8 @@ const catalogConfig = {
     'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&release_date.gte=2010-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['American horror movies 2010s', 'American scary movies 2020s', 'supernatural horror movies 2020s']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&release_date.gte=1980-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American horror movies 1980s', 'American horror movies 1990s', 'American scary movies 2020s', 'supernatural horror movies 2020s']
     },
     'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
     'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
@@ -137,7 +143,7 @@ const catalogConfig = {
     'snakeeyes-fastnfurious': { type: 'collection', collectionId: '9485', fallbackQueries: ['Fast & Furious', 'The Fast and the Furious'] },
     'snakeeyes-superman': { type: 'collection', collectionId: '863151', fallbackQueries: ['Superman', 'Man of Steel', 'Superman Returns'] },
     'snakeeyes-batman': { type: 'collection', collectionId: '948485', fallbackQueries: ['Batman', 'The Dark Knight', 'Batman Begins'] },
-    'snakeeyes-starwars-tv': { type: 'search_tv', queries: ['The Mandalorian', 'Andor', 'Obi-Wan Kenobi', 'The Book of Boba Fett', 'Ahsoka', 'Star Wars The Clone Wars', 'Star Wars Rebels', 'The Bad Batch'] },
+    'snakeeyes-starwars-tv': { type: 'search_tv', queries: ['The Mandalorian', 'Andor', 'Obi-Wan Kenobi', 'The Book of Boba Fett', 'Ahsoka', 'Star Wars The Clone Wars', 'Star Wars Rebels', 'The Bad Batch', 'Star Wars: Young Jedi Adventures'] },
     'snakeeyes-xmen-tv': { type: 'search_tv', queries: ['X-Men The Animated Series', 'X-Men Evolution', 'Wolverine and the X-Men', 'X-Men 97'] },
     'snakeeyes-transformers-tv': { type: 'search_tv', queries: ['Transformers Generation 1', 'Transformers Animated', 'Transformers Prime', 'Transformers Robots in Disguise', 'Transformers Cyberverse'] },
     'snakeeyes-batman-tv': { type: 'search_tv', queries: ['Batman The Animated Series', 'The Batman', 'Batman Beyond', 'Gotham', 'Batwoman', 'Batman Caped Crusader'] },
@@ -376,32 +382,29 @@ app.get('/', (req, res) => {
     h1 { color: #7b5cff; }
     .btn { background-color: #7b5cff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 1.2em; display: inline-block; margin-top: 20px; }
     .btn:hover { background-color: #6245e0; }
-    .categories { margin-top: 40px; text-align: left; max-width: 700px; margin-left: auto; margin-right: auto; background: #2a2a2a; padding: 20px; border-radius: 10px; }
+    .categories { margin-top: 40px; text-align: left; max-width: 850px; margin-left: auto; margin-right: auto; background: #2a2a2a; padding: 20px; border-radius: 10px; }
     ul { columns: 2; }
   </style>
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Recent American 2010s-2020s movies, kids, horror, drama, comedy, documentaries, and franchise picks.</p>
+  <p>Popular movies now, classics from the 1980s and 1990s, 2020s hits, series, and horror collections.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
     <ul>
-      <li>🔥 Popular & Award Films</li>
-      <li>🧒 Kids Zone</li>
+      <li>🎬 Popular Movies Now</li>
+      <li>📼 Movies 1980s</li>
+      <li>📼 Movies 1990s</li>
+      <li>📼 Movies 2020s</li>
+      <li>📺 Popular Series</li>
+      <li>👻 Horror Movies</li>
+      <li>🏆 Award Winning Films</li>
       <li>🎥 Documentaries</li>
-      <li>📼 2010s, 2020s Movies</li>
       <li>🎭 Drama Series</li>
       <li>😂 Comedy Series</li>
       <li>👻 Horror Series</li>
       <li>🔮 Supernatural Horror Shows</li>
-      <li>🔪 Horror Movies</li>
-      <li>👁️ Insidious Collection</li>
-      <li>😈 Hellraiser Collection</li>
-      <li>🎃 Halloween Collection</li>
-      <li>🦷 Predator Collection</li>
-      <li>🗡️ Friday the 13th Collection</li>
-      <li>😱 Nightmare on Elm Street Collection</li>
       <li>💍 Lord of the Rings</li>
       <li>🐶 John Wick Collection</li>
       <li>🤖 Transformers Collection</li>
@@ -488,6 +491,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.11 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.12 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
