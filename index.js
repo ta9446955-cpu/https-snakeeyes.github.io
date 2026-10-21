@@ -401,4 +401,71 @@ app.get('/catalog/:type/:id.json', async (req, res) => {
     if (!TMDB_API_KEY) {
         console.error('TMDB_API_KEY not set');
         return res.json({ metas: [] });
-  
+    }
+
+    try {
+        const metas = await fetchMetas(id, type);
+        res.json({ metas: metas.filter(m => m && m.name && m.name !== 'Unknown') });
+    } catch (err) {
+        console.error('Catalog error:', err.message);
+        res.json({ metas: [] });
+    }
+});
+
+app.get('/meta/:type/:id.json', async (req, res) => {
+    const { type, id } = req.params;
+    if (!TMDB_API_KEY) return res.json({ meta: {} });
+
+    try {
+        const mediaType = type === 'series' ? 'tv' : 'movie';
+        let detail = null;
+
+        if (id.startsWith('tmdb:')) {
+            const tmdbId = id.replace('tmdb:', '');
+            detail = await fetchTmdb(`${mediaType}/${tmdbId}`, { append_to_response: 'videos' });
+        } else if (/^tt\d+$/.test(id)) {
+            const findData = await fetchTmdb('find/' + id, { external_source: 'imdb_id' });
+            let tmdbId = null;
+            if (mediaType === 'movie' && Array.isArray(findData.movie_results) && findData.movie_results.length > 0) {
+                tmdbId = findData.movie_results[0].id;
+            } else if (mediaType === 'tv' && Array.isArray(findData.tv_results) && findData.tv_results.length > 0) {
+                tmdbId = findData.tv_results[0].id;
+            }
+            if (tmdbId) {
+                detail = await fetchTmdb(`${mediaType}/${tmdbId}`, { append_to_response: 'videos' });
+            }
+        }
+
+        if (!detail || detail.success === false) return res.json({ meta: {} });
+
+        const trailerUrl = extractTrailerUrl(detail);
+        const meta = {
+            id,
+            type,
+            name: normalizeTitle(detail),
+            poster: detail.poster_path ? `https://image.tmdb.org/t/p/w500${detail.poster_path}` : null,
+            background: detail.backdrop_path ? `https://image.tmdb.org/t/p/w1280${detail.backdrop_path}` : null,
+            description: normalizeOverview(detail),
+            releaseInfo: (detail.release_date || detail.first_air_date || '').split('-')[0],
+            runtime: type === 'movie' && detail.runtime ? `${detail.runtime} min` : null,
+            imdbRating: detail.vote_average ? detail.vote_average.toFixed(1) : null,
+            trailer: trailerUrl,
+            videos: buildVideoList(detail, type)
+        };
+
+        res.json({ meta });
+    } catch (err) {
+        console.error('Meta error:', err.message);
+        res.json({ meta: {} });
+    }
+});
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', tmdb: TMDB_API_KEY ? 'set' : 'NOT SET' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Snakeeyes Catalog v3.9 running on port ${PORT}`);
+    if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
+});
