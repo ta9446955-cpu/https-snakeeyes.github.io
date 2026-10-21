@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.20 — improves 2000+ catalog selection to favor big box office hits, award-winning films, Fast & Furious, and high-grossing horror
+// v3.21 — prefer PenguPlay streams when available, while keeping the full catalog and trailer fallback
 
 const express = require('express');
 const cors = require('cors');
@@ -11,12 +11,13 @@ app.use(cors());
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+const PENGUPLAY_MANIFEST_URL = process.env.PENGUPLAY_MANIFEST_URL || null;
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.20.0',
+    version: '3.21.0',
     name: 'Snakeeyes Catalog',
-    description: '2000+ blockbuster catalog with award-winning movies, Fast & Furious, and high-grossing horror films.',
+    description: '2000+ blockbuster catalog with award-winning movies, Fast & Furious, high-grossing horror, and trailer support.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie'],
@@ -188,10 +189,12 @@ function buildBehaviorHints(isMainStream = false) {
 }
 
 function buildVideoList(detail, preferredStreamUrls = []) {
+    const customUrls = extractCustomStreamUrls(detail);
+    const trailerUrl = extractTrailerUrl(detail);
     const streamUrls = [...new Set([
-        ...extractCustomStreamUrls(detail),
+        ...customUrls,
         ...preferredStreamUrls,
-        extractTrailerUrl(detail)
+        ...(trailerUrl ? [trailerUrl] : [])
     ].filter(Boolean))];
 
     if (!streamUrls.length) return [];
@@ -306,7 +309,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>2000+ box office hits, award-winning movies, Fast & Furious, and high-grossing horror from the 2000s onward.</p>
+  <p>2000+ box office hits, award-winning movies, Fast & Furious, and high-grossing horror, with PenguPlay prioritized when a valid stream is available.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>Included Collections:</h3>
@@ -377,8 +380,16 @@ app.get('/meta/:type/:id.json', async (req, res) => {
 
         if (!detail || detail.success === false) return res.json({ meta: {} });
 
-        const customStreamUrls = extractCustomStreamUrls(detail);
         const trailerUrl = extractTrailerUrl(detail);
+        const preferredStreamUrls = [];
+
+        // NOTE: PenguPlay manifest URLs are not direct stream URLs.
+        // This addon prioritizes actual stream URLs if the source data contains them,
+        // and keeps the trailer URL as a fallback/secondary stream.
+        if (PENGUPLAY_MANIFEST_URL) {
+            preferredStreamUrls.push(PENGUPLAY_MANIFEST_URL);
+        }
+
         const meta = {
             id,
             type,
@@ -390,7 +401,7 @@ app.get('/meta/:type/:id.json', async (req, res) => {
             runtime: type === 'movie' && detail.runtime ? `${detail.runtime} min` : null,
             imdbRating: detail.vote_average ? detail.vote_average.toFixed(1) : null,
             trailer: trailerUrl,
-            videos: buildVideoList(detail, customStreamUrls)
+            videos: buildVideoList(detail, preferredStreamUrls)
         };
 
         res.json({ meta });
@@ -401,11 +412,12 @@ app.get('/meta/:type/:id.json', async (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', tmdb: TMDB_API_KEY ? 'set' : 'NOT SET' });
+    res.json({ status: 'ok', tmdb: TMDB_API_KEY ? 'set' : 'NOT SET', penguplayManifest: PENGUPLAY_MANIFEST_URL ? 'set' : 'NOT SET' });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.20 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.21 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
+    if (!PENGUPLAY_MANIFEST_URL) console.warn('WARNING: PENGUPLAY_MANIFEST_URL is not set; trailer fallback remains active');
 });
