@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.16 — franchise-only catalog with this-year popular/horror, no series, no Wrong Turn duplicates
+// v3.17 — final franchise-only catalog with popular and horror from 2020 onward, no series, no Wrong Turn duplicates
 
 const express = require('express');
 const cors = require('cors');
@@ -11,20 +11,18 @@ app.use(cors());
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE = 'https://api.themoviedb.org/3';
-const CURRENT_YEAR = new Date().getFullYear();
-const CURRENT_YEAR_START = `${CURRENT_YEAR}-01-01`;
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.16.0',
+    version: '3.17.0',
     name: 'Snakeeyes Catalog',
-    description: 'This year popular movies and franchise collections including Spider-Man, Avengers, Jurassic Park, Godzilla, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child\'s Play, and current horror picks.',
+    description: 'Franchise-focused movie catalog: popular films and horror from 2020 onward plus Spider-Man, Avengers, Jurassic Park, Godzilla, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, and Child\'s Play.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
-        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies This Year' },
+        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies (2020+)' },
         { type: 'movie', id: 'snakeeyes-spiderman', name: '🕷️ Spider-Man Collection' },
         { type: 'movie', id: 'snakeeyes-avengers', name: '🦸 Avengers Collection' },
         { type: 'movie', id: 'snakeeyes-jurassic', name: '🦖 Jurassic Park Collection' },
@@ -37,15 +35,15 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-moana', name: '🌊 Moana Collection' },
         { type: 'movie', id: 'snakeeyes-candyman', name: '🩸 Candyman Collection' },
         { type: 'movie', id: 'snakeeyes-childsplay', name: '🤖 Child\'s Play Collection' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Popular Horror This Year' }
+        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Popular Horror (2020+)' }
     ]
 };
 
 const catalogConfig = {
     'snakeeyes-popular': {
         type: 'discover',
-        endpoint: `discover/movie?include_adult=false&sort_by=popularity.desc&release_date.gte=${CURRENT_YEAR_START}`,
-        fallbackQueries: ['popular movies this year', 'latest blockbuster movies', 'popular action movies now']
+        endpoint: 'discover/movie?include_adult=false&sort_by=popularity.desc&release_date.gte=2020-01-01',
+        fallbackQueries: ['popular movies 2024', 'latest blockbuster movies', 'popular action movies 2020s']
     },
     'snakeeyes-spiderman': { type: 'search_movie', queries: ['Spider-Man', 'Spider-Man: Homecoming', 'Spider-Man: Far From Home', 'Spider-Man: No Way Home', 'The Amazing Spider-Man'] },
     'snakeeyes-avengers': { type: 'search_movie', queries: ['Avengers', 'The Avengers', 'Avengers: Infinity War', 'Avengers: Endgame', 'Captain America: The First Avenger'] },
@@ -61,8 +59,8 @@ const catalogConfig = {
     'snakeeyes-childsplay': { type: 'search_movie', queries: ['Child\'s Play', 'Child\'s Play 2', 'Child\'s Play 3', 'Bride of Chucky', 'Seed of Chucky'] },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: `discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc&release_date.gte=${CURRENT_YEAR_START}`,
-        fallbackQueries: ['popular horror movies this year', 'new horror movies', 'scary movie hits now']
+        endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc&release_date.gte=2020-01-01',
+        fallbackQueries: ['popular horror movies 2024', 'scary movies now', 'new horror movies 2020s']
     }
 };
 
@@ -103,11 +101,8 @@ function dedupeMetas(items) {
     const map = new Map();
     for (const item of items || []) {
         if (!item || !item.id || !item.name || item.name === 'Unknown') continue;
-        const titleKey = (item.name || '').trim().toLowerCase();
-        const idKey = (item.id || '').toLowerCase();
-        const dedupeKey = `${idKey}|${titleKey}`;
-        if (map.has(dedupeKey)) continue;
-        map.set(dedupeKey, item);
+        const dedupeKey = `${String(item.id).toLowerCase()}|${String(item.name).trim().toLowerCase()}`;
+        if (!map.has(dedupeKey)) map.set(dedupeKey, item);
     }
     return [...map.values()];
 }
@@ -239,12 +234,12 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Popular movies this year and franchise collections only.</p>
+  <p>Popular movies and horror from 2020 onward, plus franchise collections only.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>Included Collections:</h3>
     <ul>
-      <li>🎬 Popular Movies This Year</li>
+      <li>🎬 Popular Movies (2020+)</li>
       <li>🕷️ Spider-Man Collection</li>
       <li>🦸 Avengers Collection</li>
       <li>🦖 Jurassic Park Collection</li>
@@ -257,7 +252,7 @@ app.get('/', (req, res) => {
       <li>🌊 Moana Collection</li>
       <li>🩸 Candyman Collection</li>
       <li>🤖 Child's Play Collection</li>
-      <li>👻 Popular Horror This Year</li>
+      <li>👻 Popular Horror (2020+)</li>
     </ul>
   </div>
 </body>
@@ -336,6 +331,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.16 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.17 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
