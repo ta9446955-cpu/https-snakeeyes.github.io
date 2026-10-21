@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.19 — keeps the franchise-only catalog and supports both a playable source and trailer stream
+// v3.20 — improves 2000+ catalog selection to favor big box office hits, award-winning films, Fast & Furious, and high-grossing horror
 
 const express = require('express');
 const cors = require('cors');
@@ -14,15 +14,17 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.19.0',
+    version: '3.20.0',
     name: 'Snakeeyes Catalog',
-    description: 'Franchise-focused movie catalog: popular films and horror from 2020 onward plus Spider-Man, Avengers, Jurassic Park, Godzilla, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child\'s Play.',
+    description: '2000+ blockbuster catalog with award-winning movies, Fast & Furious, and high-grossing horror films.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
-        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies (2020+)' },
+        { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Blockbusters (2000+)' },
+        { type: 'movie', id: 'snakeeyes-fastfurious', name: '🏎️ Fast & Furious Collection' },
+        { type: 'movie', id: 'snakeeyes-awards', name: '🏆 Award-Winning Movies' },
         { type: 'movie', id: 'snakeeyes-spiderman', name: '🕷️ Spider-Man Collection' },
         { type: 'movie', id: 'snakeeyes-avengers', name: '🦸 Avengers Collection' },
         { type: 'movie', id: 'snakeeyes-jurassic', name: '🦖 Jurassic Park Collection' },
@@ -35,15 +37,24 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-moana', name: '🌊 Moana Collection' },
         { type: 'movie', id: 'snakeeyes-candyman', name: '🩸 Candyman Collection' },
         { type: 'movie', id: 'snakeeyes-childsplay', name: '🤖 Child\'s Play Collection' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Popular Horror (2020+)' }
+        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Box Office Horror (2000+)' }
     ]
 };
 
 const catalogConfig = {
     'snakeeyes-popular': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&sort_by=popularity.desc&release_date.gte=2020-01-01',
-        fallbackQueries: ['popular movies 2024', 'latest blockbuster movies', 'popular action movies 2020s']
+        endpoint: 'discover/movie?include_adult=false&sort_by=revenue.desc&release_date.gte=2000-01-01&vote_count.gte=1000',
+        fallbackQueries: ['biggest box office movies 2000s', 'popular blockbuster movies 2000+', 'high grossing action movies']
+    },
+    'snakeeyes-fastfurious': {
+        type: 'search_movie',
+        queries: ['The Fast and the Furious', '2 Fast 2 Furious', 'Fast Five', 'Fast & Furious 6', 'Furious 7', 'The Fate of the Furious', 'F9', 'Fast X']
+    },
+    'snakeeyes-awards': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&sort_by=vote_average.desc&release_date.gte=2000-01-01&vote_count.gte=5000&vote_average.gte=7.5',
+        fallbackQueries: ['award winning movies 2000s', 'best movies 2000 plus', 'high rated movies 2000 onward']
     },
     'snakeeyes-spiderman': { type: 'search_movie', queries: ['Spider-Man', 'Spider-Man: Homecoming', 'Spider-Man: Far From Home', 'Spider-Man: No Way Home', 'The Amazing Spider-Man'] },
     'snakeeyes-avengers': { type: 'search_movie', queries: ['Avengers', 'The Avengers', 'Avengers: Infinity War', 'Avengers: Endgame', 'Captain America: The First Avenger'] },
@@ -59,8 +70,8 @@ const catalogConfig = {
     'snakeeyes-childsplay': { type: 'search_movie', queries: ['Child\'s Play', 'Child\'s Play 2', 'Child\'s Play 3', 'Bride of Chucky', 'Seed of Chucky'] },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc&release_date.gte=2020-01-01',
-        fallbackQueries: ['popular horror movies 2024', 'scary movies now', 'new horror movies 2020s']
+        endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=revenue.desc&release_date.gte=2000-01-01&vote_count.gte=1000',
+        fallbackQueries: ['top grossing horror movies 2000s', 'big box office horror films', 'popular scary movies 2000 onward']
     }
 };
 
@@ -295,12 +306,14 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Popular movies and horror from 2020 onward, plus franchise collections only, with both playable source and trailer support.</p>
+  <p>2000+ box office hits, award-winning movies, Fast & Furious, and high-grossing horror from the 2000s onward.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>Included Collections:</h3>
     <ul>
-      <li>🎬 Popular Movies (2020+)</li>
+      <li>🎬 Blockbusters (2000+)</li>
+      <li>🏎️ Fast & Furious Collection</li>
+      <li>🏆 Award-Winning Movies</li>
       <li>🕷️ Spider-Man Collection</li>
       <li>🦸 Avengers Collection</li>
       <li>🦖 Jurassic Park Collection</li>
@@ -313,7 +326,7 @@ app.get('/', (req, res) => {
       <li>🌊 Moana Collection</li>
       <li>🩸 Candyman Collection</li>
       <li>🤖 Child's Play Collection</li>
-      <li>👻 Popular Horror (2020+)</li>
+      <li>👻 Box Office Horror (2000+)</li>
     </ul>
   </div>
 </body>
@@ -393,6 +406,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.19 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.20 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
