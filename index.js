@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.3 — Fixed empty category filters and added recovery fallbacks for TV/movie discovery
+// v3.4 — Tuned to your exact movie and series tastes: 80s/90s/00s, Kids, Horror, Docs, Drama, Comedy, Supernatural Horror
 
 const express = require('express');
 const cors = require('cors');
@@ -14,7 +14,7 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.3.0',
+    version: '3.4.0',
     name: 'Snakeeyes Catalog',
     description: 'Custom catalogs for Movies, TV Shows, Directors, Decades, and Franchises.',
     logo: 'https://via.placeholder.com/150',
@@ -32,11 +32,11 @@ const manifest = {
         { type: 'series', id: 'snakeeyes-drama', name: '🎭 Drama Series' },
         { type: 'series', id: 'snakeeyes-comedy', name: '😂 Comedy Series' },
         { type: 'series', id: 'snakeeyes-horror-tv', name: '👻 Horror Series' },
-        { type: 'series', id: 'snakeeyes-supernatural', name: '🔮 Supernatural Shows' },
+        { type: 'series', id: 'snakeeyes-supernatural', name: '🔮 Supernatural Horror Shows' },
+        { type: 'movie', id: 'snakeeyes-horror', name: '🔪 Horror Movies' },
         { type: 'movie', id: 'snakeeyes-nolan', name: '🎬 Christopher Nolan Collection' },
         { type: 'movie', id: 'snakeeyes-tarantino', name: '🎬 Quentin Tarantino Collection' },
         { type: 'movie', id: 'snakeeyes-leo', name: '🌟 Leonardo DiCaprio Films' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '🔪 Horror Movies' },
         { type: 'movie', id: 'snakeeyes-insidious', name: '👁️ Insidious Collection' },
         { type: 'movie', id: 'snakeeyes-hellraiser', name: '😈 Hellraiser Collection' },
         { type: 'movie', id: 'snakeeyes-halloween', name: '🎃 Halloween Collection' },
@@ -64,13 +64,13 @@ const catalogConfig = {
     'snakeeyes-award': { type: 'discover', endpoint: 'movie/top_rated', fallbackQueries: ['award winning movies'] },
     'snakeeyes-kids': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_genres=10751,16&sort_by=popularity.desc',
-        fallbackQueries: ['family movies', 'kids movies', 'animated movies']
+        endpoint: 'discover/movie?include_adult=false&with_genres=16,10751&sort_by=popularity.desc',
+        fallbackQueries: ['kids movies', 'family friendly movies', 'animated family movies']
     },
     'snakeeyes-docs': {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&with_genres=99&sort_by=popularity.desc',
-        fallbackQueries: ['documentary films', 'nature documentary', 'history documentary']
+        fallbackQueries: ['documentary films', 'history documentary', 'nature documentary']
     },
     'snakeeyes-80s': {
         type: 'discover',
@@ -85,32 +85,36 @@ const catalogConfig = {
     'snakeeyes-00s': {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['2000s movies', 'classic 2000s movies']
+        fallbackQueries: ['2000s movies', 'classic 2000s films']
     },
     'snakeeyes-drama': {
         type: 'discover',
         endpoint: 'discover/tv?include_adult=false&with_genres=18&sort_by=popularity.desc',
-        fallbackQueries: ['drama series', 'best drama shows']
+        fallbackQueries: ['drama series', 'best drama shows', 'critically acclaimed drama series']
     },
     'snakeeyes-comedy': {
         type: 'discover',
         endpoint: 'discover/tv?include_adult=false&with_genres=35&sort_by=popularity.desc',
-        fallbackQueries: ['comedy series', 'funny shows']
+        fallbackQueries: ['comedy series', 'funny shows', 'sitcoms']
     },
     'snakeeyes-horror-tv': {
         type: 'discover',
         endpoint: 'discover/tv?include_adult=false&with_genres=27&sort_by=popularity.desc',
-        fallbackQueries: ['horror series', 'supernatural horror series']
+        fallbackQueries: ['horror series', 'scary tv shows', 'spooky series']
     },
     'snakeeyes-supernatural': {
         type: 'discover',
         endpoint: 'discover/tv?include_adult=false&with_genres=27,10765&sort_by=popularity.desc',
-        fallbackQueries: ['supernatural series', 'paranormal shows', 'supernatural horror shows']
+        fallbackQueries: ['supernatural horror shows', 'paranormal series', 'haunted tv shows']
     },
     'snakeeyes-nolan': { type: 'person_movies', personId: '525' },
     'snakeeyes-tarantino': { type: 'person_movies', personId: '138' },
     'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
-    'snakeeyes-horror': { type: 'discover', endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc', fallbackQueries: ['horror movies', 'scary films'] },
+    'snakeeyes-horror': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc',
+        fallbackQueries: ['horror movies', 'scary films', 'supernatural horror movies']
+    },
     'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
     'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
     'snakeeyes-halloween': { type: 'collection', collectionId: '1262', fallbackQueries: ['Halloween', 'Halloween Kills', 'Halloween Ends'] },
@@ -347,31 +351,28 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>The ultimate custom catalog for Movies, TV Shows, Directors, Decades, and Franchises.</p>
+  <p>Movies, TV, decades, kids picks, supernatural horror, docs, drama, comedy, and horror collections.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
     <ul>
-      <li>🔥 Popular & Award Films</li>
-      <li>🧒 Kids Zone & Docs</li>
-      <li>📼 80s, 90s, 00s Decades</li>
-      <li>🎭 Drama, Comedy, Horror TV</li>
-      <li>🎬 Nolan & Tarantino</li>
-      <li>💍 Lord of the Rings</li>
-      <li>⭐ Star Wars (Movies + TV)</li>
-      <li>🐶 John Wick</li>
-      <li>🤖 Transformers (Movies + TV)</li>
-      <li>⚡ X-Men (Movies + TV)</li>
-      <li>🚗 Fast & Furious</li>
-      <li>🦸 Superman (Movies + TV)</li>
-      <li>🦇 Batman (Movies + TV)</li>
-      <li>👁️ Insidious Collection</li>
-      <li>😈 Hellraiser Collection</li>
-      <li>🎃 Halloween Collection</li>
-      <li>🦷 Predator Collection</li>
-      <li>🗡️ Friday the 13th Collection</li>
-      <li>😱 Nightmare on Elm Street Collection</li>
+      <li>🧒 Kids Zone</li>
+      <li>🎥 Documentaries</li>
+      <li>📼 1980s, 1990s, 2000s Movies</li>
+      <li>🎭 Drama Series</li>
+      <li>😂 Comedy Series</li>
+      <li>👻 Horror Series</li>
+      <li>🔮 Supernatural Horror Shows</li>
       <li>🔪 Horror Movies</li>
+      <li>🔥 Popular & Award Films</li>
+      <li>💍 Lord of the Rings</li>
+      <li>⭐ Star Wars</li>
+      <li>🐶 John Wick</li>
+      <li>🤖 Transformers</li>
+      <li>⚡ X-Men</li>
+      <li>🚗 Fast & Furious</li>
+      <li>🦸 Superman</li>
+      <li>🦇 Batman</li>
     </ul>
   </div>
 </body>
@@ -450,6 +451,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.3 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.4 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
