@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.14 — franchise-focused catalog: popular movies + Spider-Man, Avengers, Jurassic Park, Godzilla, Wrong Turn, Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child's Play
+// v3.15 — franchise-only catalog cleanup, no series categories, no duplicate entries
 
 const express = require('express');
 const cors = require('cors');
@@ -14,12 +14,12 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.14.0',
+    version: '3.15.0',
     name: 'Snakeeyes Catalog',
-    description: 'Popular movies and big franchise collections including Spider-Man, Avengers, Jurassic Park, Godzilla, Wrong Turn, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, and Child\'s Play.',
+    description: 'Franchise-focused movie catalog featuring Spider-Man, Avengers, Jurassic Park, Godzilla, Wrong Turn, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child\'s Play, and horror picks.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
-    types: ['movie', 'series'],
+    types: ['movie'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
         { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies' },
@@ -36,20 +36,7 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-moana', name: '🌊 Moana Collection' },
         { type: 'movie', id: 'snakeeyes-candyman', name: '🩸 Candyman Collection' },
         { type: 'movie', id: 'snakeeyes-childsplay', name: '🤖 Child\'s Play Collection' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Horror Movies' },
-        { type: 'series', id: 'snakeeyes-series', name: '📺 Popular Series' },
-        { type: 'series', id: 'snakeeyes-drama', name: '🎭 Drama Series' },
-        { type: 'series', id: 'snakeeyes-comedy', name: '😂 Comedy Series' },
-        { type: 'series', id: 'snakeeyes-horror-tv', name: '👻 Horror Series' },
-        { type: 'series', id: 'snakeeyes-supernatural', name: '🔮 Supernatural Horror Shows' },
-        { type: 'movie', id: 'snakeeyes-lotr', name: '💍 Lord of the Rings' },
-        { type: 'movie', id: 'snakeeyes-johnwick', name: '🐶 John Wick Collection' },
-        { type: 'movie', id: 'snakeeyes-transformers', name: '🤖 Transformers Collection' },
-        { type: 'movie', id: 'snakeeyes-xmen', name: '⚡ X-Men Collection' },
-        { type: 'movie', id: 'snakeeyes-starwars', name: '⭐ Star Wars Collection' },
-        { type: 'movie', id: 'snakeeyes-fastnfurious', name: '🚗 Fast & Furious Collection' },
-        { type: 'movie', id: 'snakeeyes-superman', name: '🦸 Superman Films' },
-        { type: 'movie', id: 'snakeeyes-batman', name: '🦇 Batman Films' }
+        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Horror Movies' }
     ]
 };
 
@@ -60,56 +47,23 @@ const catalogConfig = {
         fallbackQueries: ['popular movies 2024', 'latest blockbuster movies', 'most popular action movies']
     },
     'snakeeyes-spiderman': { type: 'search_movie', queries: ['Spider-Man', 'Spider-Man: Homecoming', 'Spider-Man: Far From Home', 'Spider-Man: No Way Home', 'The Amazing Spider-Man'] },
-    'snakeeyes-avengers': { type: 'search_movie', queries: ['Avengers', 'Avengers: Endgame', 'Avengers: Infinity War', 'The Avengers', 'Captain America The First Avenger'] },
-    'snakeeyes-jurassic': { type: 'search_movie', queries: ['Jurassic Park', 'Jurassic World', 'Jurassic World Dominion', 'The Lost World: Jurassic Park'] },
-    'snakeeyes-godzilla': { type: 'search_movie', queries: ['Godzilla', 'Godzilla King of the Monsters', 'Godzilla vs Kong', 'Godzilla 1985'] },
+    'snakeeyes-avengers': { type: 'search_movie', queries: ['Avengers', 'The Avengers', 'Avengers: Infinity War', 'Avengers: Endgame', 'Captain America: The First Avenger'] },
+    'snakeeyes-jurassic': { type: 'search_movie', queries: ['Jurassic Park', 'Jurassic World', 'The Lost World: Jurassic Park', 'Jurassic World Dominion', 'Jurassic Park III'] },
+    'snakeeyes-godzilla': { type: 'search_movie', queries: ['Godzilla', 'Godzilla: King of the Monsters', 'Godzilla vs. Kong', 'Godzilla 1985', 'Godzilla: Tokyo SOS'] },
     'snakeeyes-wrongturn': { type: 'search_movie', queries: ['Wrong Turn', 'Wrong Turn 2', 'Wrong Turn 3', 'Wrong Turn 4', 'Wrong Turn 5'] },
     'snakeeyes-conjuring': { type: 'search_movie', queries: ['The Conjuring', 'The Conjuring 2', 'The Conjuring: The Devil Made Me Do It', 'Annabelle', 'The Nun'] },
     'snakeeyes-saw': { type: 'search_movie', queries: ['Saw', 'Saw 2', 'Saw 3', 'Saw 4', 'Saw 5', 'Saw X'] },
     'snakeeyes-terminator': { type: 'search_movie', queries: ['The Terminator', 'Terminator 2: Judgment Day', 'Terminator 3', 'Terminator Genisys', 'Terminator: Dark Fate'] },
     'snakeeyes-toystory': { type: 'search_movie', queries: ['Toy Story', 'Toy Story 2', 'Toy Story 3', 'Toy Story 4', 'Toy Story 5'] },
     'snakeeyes-minions': { type: 'search_movie', queries: ['Minions', 'Despicable Me', 'Despicable Me 2', 'Despicable Me 3', 'Minions: The Rise of Gru'] },
-    'snakeeyes-moana': { type: 'search_movie', queries: ['Moana', 'Moana 2', 'Encanto', 'Frozen', 'Tangled'] },
+    'snakeeyes-moana': { type: 'search_movie', queries: ['Moana', 'Moana 2', 'Frozen', 'Encanto', 'Tangled'] },
     'snakeeyes-candyman': { type: 'search_movie', queries: ['Candyman', 'Candyman 2', 'Candyman 3', 'Candyman: Day of the Dead', 'Candyman 2021'] },
     'snakeeyes-childsplay': { type: 'search_movie', queries: ['Child\'s Play', 'Child\'s Play 2', 'Child\'s Play 3', 'Bride of Chucky', 'Seed of Chucky'] },
     'snakeeyes-horror': {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc&release_date.gte=2010-01-01',
-        fallbackQueries: ['modern horror movies', 'popular horror films', 'scary movie collection']
-    },
-    'snakeeyes-series': {
-        type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&sort_by=popularity.desc&first_air_date.gte=2010-01-01',
-        fallbackQueries: ['popular American series 2024', 'best American tv shows 2020s', 'new series 2024']
-    },
-    'snakeeyes-drama': {
-        type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=18&sort_by=popularity.desc&first_air_date.gte=2010-01-01',
-        fallbackQueries: ['American drama series', 'best drama shows', 'award drama series']
-    },
-    'snakeeyes-comedy': {
-        type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=35&sort_by=popularity.desc&first_air_date.gte=2010-01-01',
-        fallbackQueries: ['American comedy series', 'funny shows 2020s', 'sitcoms']
-    },
-    'snakeeyes-horror-tv': {
-        type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=27&sort_by=popularity.desc&first_air_date.gte=2010-01-01',
-        fallbackQueries: ['American horror series', 'scary shows', 'haunted series']
-    },
-    'snakeeyes-supernatural': {
-        type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_genres=27,10765&sort_by=popularity.desc&first_air_date.gte=2010-01-01',
-        fallbackQueries: ['American supernatural horror shows', 'paranormal series', 'haunted shows']
-    },
-    'snakeeyes-lotr': { type: 'collection', collectionId: '119', fallbackQueries: ['The Lord of the Rings'] },
-    'snakeeyes-johnwick': { type: 'collection', collectionId: '404609', fallbackQueries: ['John Wick'] },
-    'snakeeyes-transformers': { type: 'collection', collectionId: '8650', fallbackQueries: ['Transformers'] },
-    'snakeeyes-xmen': { type: 'collection', collectionId: '748', fallbackQueries: ['X-Men'] },
-    'snakeeyes-starwars': { type: 'collection', collectionId: '10', fallbackQueries: ['Star Wars'] },
-    'snakeeyes-fastnfurious': { type: 'collection', collectionId: '9485', fallbackQueries: ['Fast & Furious', 'The Fast and the Furious'] },
-    'snakeeyes-superman': { type: 'collection', collectionId: '863151', fallbackQueries: ['Superman', 'Man of Steel', 'Superman Returns'] },
-    'snakeeyes-batman': { type: 'collection', collectionId: '948485', fallbackQueries: ['Batman', 'The Dark Knight', 'Batman Begins'] }
+        fallbackQueries: ['modern horror movies', 'popular horror films', 'best horror movies']
+    }
 };
 
 function cleanTitleForUsOnly(item) {
@@ -145,23 +99,15 @@ function movieToMeta(item) {
     };
 }
 
-function tvToMeta(item) {
-    if (!item || !item.id) return null;
-    return {
-        id: buildId(item),
-        type: 'series',
-        name: normalizeTitle(item),
-        poster: item.poster_path ? `https://image.tmdb.org/t/p/w300${item.poster_path}` : null,
-        background: item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : null,
-        description: normalizeOverview(item)
-    };
-}
-
 function dedupeMetas(items) {
     const map = new Map();
     for (const item of items || []) {
         if (!item || !item.id || !item.name || item.name === 'Unknown') continue;
-        map.set(item.id, item);
+        const titleKey = (item.name || '').trim().toLowerCase();
+        const idKey = (item.id || '').toLowerCase();
+        const dedupeKey = `${idKey}|${titleKey}`;
+        if (map.has(dedupeKey)) continue;
+        map.set(dedupeKey, item);
     }
     return [...map.values()];
 }
@@ -179,7 +125,7 @@ function extractTrailerUrl(detail) {
     return `https://www.youtube.com/watch?v=${trailer.key}`;
 }
 
-function buildVideoList(detail, type) {
+function buildVideoList(detail) {
     const trailerUrl = extractTrailerUrl(detail);
     if (!trailerUrl) return [];
 
@@ -188,7 +134,7 @@ function buildVideoList(detail, type) {
         id: 'trailer',
         title: 'Trailer',
         released: releaseDate,
-        type: type === 'series' ? 'series' : 'movie',
+        type: 'movie',
         streams: [{
             url: trailerUrl,
             title: 'Trailer',
@@ -220,8 +166,8 @@ async function fetchMetas(catalogId, type) {
         }
 
         const filtered = results.filter(item => cleanTitleForUsOnly(item));
-        let metas = type === 'series' ? filtered.map(tvToMeta) : filtered.map(movieToMeta);
-        let deduped = dedupeMetas(metas);
+        const metas = filtered.map(movieToMeta);
+        const deduped = dedupeMetas(metas);
         if (deduped.length > 0) return deduped;
 
         if (Array.isArray(config.fallbackQueries) && config.fallbackQueries.length > 0) {
@@ -229,13 +175,11 @@ async function fetchMetas(catalogId, type) {
             const seen = new Set();
             for (const query of config.fallbackQueries) {
                 try {
-                    const endpoint = type === 'series' ? 'search/tv' : 'search/movie';
-                    const data = await fetchTmdb(endpoint, { query, include_adult: false, region: 'US', language: 'en-US' });
+                    const data = await fetchTmdb('search/movie', { query, include_adult: false, language: 'en-US' });
                     const items = Array.isArray(data.results) ? data.results : [];
                     for (const item of items) {
-                        const isUsRelevant = cleanTitleForUsOnly(item);
-                        if (!isUsRelevant) continue;
-                        const meta = type === 'series' ? tvToMeta(item) : movieToMeta(item);
+                        if (!cleanTitleForUsOnly(item)) continue;
+                        const meta = movieToMeta(item);
                         if (!meta || !meta.id || seen.has(meta.id)) continue;
                         seen.add(meta.id);
                         fallbackResults.push(meta);
@@ -256,7 +200,7 @@ async function fetchMetas(catalogId, type) {
 
         for (const query of config.queries || []) {
             try {
-                const data = await fetchTmdb('search/movie', { query, include_adult: false, region: 'US', language: 'en-US' });
+                const data = await fetchTmdb('search/movie', { query, include_adult: false, language: 'en-US' });
                 const items = Array.isArray(data.results) ? data.results : [];
                 for (const item of items) {
                     if (!cleanTitleForUsOnly(item)) continue;
@@ -269,80 +213,8 @@ async function fetchMetas(catalogId, type) {
                 console.warn(`Movie search failed for ${catalogId} query ${query}:`, err.message);
             }
         }
-        return results.slice(0, 25);
-    }
 
-    if (config.type === 'collection') {
-        try {
-            const data = await fetchTmdb(`collection/${config.collectionId}`);
-            const parts = Array.isArray(data.parts) ? data.parts : [];
-            const filtered = parts.filter(item => cleanTitleForUsOnly(item));
-            const mapped = filtered.map(movieToMeta);
-            const deduped = dedupeMetas(mapped);
-            if (deduped.length > 0) return deduped;
-        } catch (err) {
-            console.warn(`Collection ${catalogId} lookup failed:`, err.message);
-        }
-
-        if (Array.isArray(config.fallbackQueries) && config.fallbackQueries.length > 0) {
-            const queryResults = [];
-            for (const query of config.fallbackQueries) {
-                try {
-                    const data = await fetchTmdb('search/movie', { query, include_adult: false, region: 'US', language: 'en-US' });
-                    const items = Array.isArray(data.results) ? data.results : [];
-                    for (const item of items) {
-                        if (!cleanTitleForUsOnly(item)) continue;
-                        queryResults.push(item);
-                    }
-                } catch (err) {
-                    console.warn(`Fallback movie search failed for ${catalogId}:`, err.message);
-                }
-            }
-            const mapped = queryResults.map(movieToMeta);
-            return dedupeMetas(mapped).slice(0, 25);
-        }
-
-        return [];
-    }
-
-    if (config.type === 'person_movies') {
-        const data = await fetchTmdb(`person/${config.personId}/movie_credits`);
-        const cast = Array.isArray(data.crew) ? data.crew : Array.isArray(data.cast) ? data.cast : [];
-        cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-        const filtered = cast.filter(item => cleanTitleForUsOnly(item));
-        const mapped = filtered.slice(0, 25).map(movieToMeta);
-        return dedupeMetas(mapped);
-    }
-
-    if (config.type === 'person_tv') {
-        const data = await fetchTmdb(`person/${config.personId}/tv_credits`);
-        const cast = Array.isArray(data.cast) ? data.cast : [];
-        cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-        const filtered = cast.filter(item => cleanTitleForUsOnly(item));
-        const mapped = filtered.slice(0, 25).map(tvToMeta);
-        return dedupeMetas(mapped);
-    }
-
-    if (config.type === 'search_tv') {
-        const results = [];
-        const seen = new Set();
-
-        for (const query of config.queries || []) {
-            try {
-                const data = await fetchTmdb('search/tv', { query, include_adult: false, region: 'US', language: 'en-US' });
-                const items = Array.isArray(data.results) ? data.results : [];
-                for (const item of items) {
-                    if (!cleanTitleForUsOnly(item)) continue;
-                    const meta = tvToMeta(item);
-                    if (!meta || !meta.id || seen.has(meta.id)) continue;
-                    seen.add(meta.id);
-                    results.push(meta);
-                }
-            } catch (err) {
-                console.warn(`TV search failed for ${catalogId} query ${query}:`, err.message);
-            }
-        }
-        return results.slice(0, 25);
+        return dedupeMetas(results).slice(0, 25);
     }
 
     return [];
@@ -367,10 +239,10 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Popular movies and franchise collections for Spider-Man, Avengers, Jurassic Park, Godzilla, Wrong Turn, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, and Child's Play.</p>
+  <p>Franchise movie collections only, including popular hits and the specific movie series you wanted.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
-    <h3>What's Included:</h3>
+    <h3>Included Collections:</h3>
     <ul>
       <li>🎬 Popular Movies</li>
       <li>🕷️ Spider-Man Collection</li>
@@ -387,15 +259,6 @@ app.get('/', (req, res) => {
       <li>🩸 Candyman Collection</li>
       <li>🤖 Child's Play Collection</li>
       <li>👻 Horror Movies</li>
-      <li>📺 Popular Series</li>
-      <li>💍 Lord of the Rings</li>
-      <li>🐶 John Wick Collection</li>
-      <li>🤖 Transformers Collection</li>
-      <li>⚡ X-Men Collection</li>
-      <li>⭐ Star Wars Collection</li>
-      <li>🚗 Fast & Furious Collection</li>
-      <li>🦸 Superman Films</li>
-      <li>🦇 Batman Films</li>
     </ul>
   </div>
 </body>
@@ -458,7 +321,7 @@ app.get('/meta/:type/:id.json', async (req, res) => {
             runtime: type === 'movie' && detail.runtime ? `${detail.runtime} min` : null,
             imdbRating: detail.vote_average ? detail.vote_average.toFixed(1) : null,
             trailer: trailerUrl,
-            videos: buildVideoList(detail, type)
+            videos: buildVideoList(detail)
         };
 
         res.json({ meta });
@@ -474,6 +337,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.14 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.15 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
