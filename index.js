@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.18 — keeps the franchise-only catalog and adds autoplay-friendly stream behavior
+// v3.19 — keeps the franchise-only catalog and supports both a playable source and trailer stream
 
 const express = require('express');
 const cors = require('cors');
@@ -14,7 +14,7 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.18.0',
+    version: '3.19.0',
     name: 'Snakeeyes Catalog',
     description: 'Franchise-focused movie catalog: popular films and horror from 2020 onward plus Spider-Man, Avengers, Jurassic Park, Godzilla, The Conjuring, Saw, Terminator, Toy Story, Minions, Moana, Candyman, Child\'s Play.',
     logo: 'https://via.placeholder.com/150',
@@ -107,12 +107,54 @@ function dedupeMetas(items) {
     return [...map.values()];
 }
 
-function extractCustomStreamUrl(detail) {
-    if (!detail) return null;
-    const candidate = detail.penguplay_url || detail.penguplayUrl || detail.stream_url || detail.streamUrl || detail.play_url || detail.playUrl;
-    if (typeof candidate !== 'string') return null;
-    const trimmed = candidate.trim();
-    return trimmed || null;
+function normalizeUrlValue(value) {
+    if (typeof value !== 'string') return null;
+    const cleaned = value.trim();
+    return cleaned ? cleaned : null;
+}
+
+function extractCustomStreamUrls(detail) {
+    if (!detail) return [];
+
+    const values = [];
+    const candidates = [
+        detail.penguplay_url,
+        detail.penguplayUrl,
+        detail.penguplay,
+        detail.stream_url,
+        detail.streamUrl,
+        detail.play_url,
+        detail.playUrl,
+        detail.url,
+        detail.link,
+        detail.source,
+        detail.sources,
+        detail.streams,
+        detail.video_url,
+        detail.videoUrl,
+        detail.embed_url,
+        detail.embedUrl
+    ];
+
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+        if (Array.isArray(candidate)) {
+            for (const item of candidate) {
+                const url = normalizeUrlValue(typeof item === 'string' ? item : item && item.url);
+                if (url) values.push(url);
+            }
+            continue;
+        }
+        if (typeof candidate === 'object') {
+            const url = normalizeUrlValue(candidate.url || candidate.href || candidate.link);
+            if (url) values.push(url);
+            continue;
+        }
+        const url = normalizeUrlValue(candidate);
+        if (url) values.push(url);
+    }
+
+    return [...new Set(values)];
 }
 
 function extractTrailerUrl(detail) {
@@ -128,28 +170,32 @@ function extractTrailerUrl(detail) {
     return `https://www.youtube.com/watch?v=${trailer.key}`;
 }
 
-function buildBehaviorHints() {
-    return {
-        bingeGroup: 'snakeeyes-franchise',
-        autoplay: true
-    };
+function buildBehaviorHints(isMainStream = false) {
+    return isMainStream
+        ? { bingeGroup: 'snakeeyes-franchise', autoplay: true }
+        : { bingeGroup: 'trailer', autoplay: false };
 }
 
-function buildVideoList(detail, preferredStreamUrl = null) {
-    const streamUrl = preferredStreamUrl || extractCustomStreamUrl(detail) || extractTrailerUrl(detail);
-    if (!streamUrl) return [];
+function buildVideoList(detail, preferredStreamUrls = []) {
+    const streamUrls = [...new Set([
+        ...extractCustomStreamUrls(detail),
+        ...preferredStreamUrls,
+        extractTrailerUrl(detail)
+    ].filter(Boolean))];
+
+    if (!streamUrls.length) return [];
 
     const releaseDate = detail.release_date || detail.first_air_date || '';
     return [{
-        id: 'primary',
-        title: 'Auto Play',
+        id: 'snakeeyes-primary',
+        title: 'Movie & Trailer',
         released: releaseDate,
         type: 'movie',
-        streams: [{
-            url: streamUrl,
-            title: 'Auto Play',
-            behaviorHints: buildBehaviorHints()
-        }]
+        streams: streamUrls.map((url, index) => ({
+            url,
+            title: index === 0 ? 'Play' : 'Trailer',
+            behaviorHints: buildBehaviorHints(index === 0)
+        }))
     }];
 }
 
@@ -249,7 +295,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Popular movies and horror from 2020 onward, plus franchise collections only, with autoplay-friendly stream metadata.</p>
+  <p>Popular movies and horror from 2020 onward, plus franchise collections only, with both playable source and trailer support.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>Included Collections:</h3>
@@ -318,7 +364,8 @@ app.get('/meta/:type/:id.json', async (req, res) => {
 
         if (!detail || detail.success === false) return res.json({ meta: {} });
 
-        const customStreamUrl = extractCustomStreamUrl(detail);
+        const customStreamUrls = extractCustomStreamUrls(detail);
+        const trailerUrl = extractTrailerUrl(detail);
         const meta = {
             id,
             type,
@@ -329,8 +376,8 @@ app.get('/meta/:type/:id.json', async (req, res) => {
             releaseInfo: (detail.release_date || detail.first_air_date || '').split('-')[0],
             runtime: type === 'movie' && detail.runtime ? `${detail.runtime} min` : null,
             imdbRating: detail.vote_average ? detail.vote_average.toFixed(1) : null,
-            trailer: extractTrailerUrl(detail),
-            videos: buildVideoList(detail, customStreamUrl)
+            trailer: trailerUrl,
+            videos: buildVideoList(detail, customStreamUrls)
         };
 
         res.json({ meta });
@@ -346,6 +393,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.18 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.19 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
