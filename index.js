@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.10 — US/English filters, 1980+ only for movie/TV categories, removed old John Wayne/Asian broad results
+// v3.11 — recent US/English catalog only: 2010 onward, no old John Wayne / non-US baggage
 
 const express = require('express');
 const cors = require('cors');
@@ -14,9 +14,9 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.10.0',
+    version: '3.11.0',
     name: 'Snakeeyes Catalog',
-    description: '1980s-2000s American Movies, TV Shows, Kids, Horror, Drama, Comedy, Documentaries, and Franchises.',
+    description: 'Recent American Movies, TV Shows, Kids, Horror, Drama, Comedy, Documentaries, and Franchises.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie', 'series'],
@@ -26,9 +26,9 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-award', name: '🏆 Award Winning Films' },
         { type: 'movie', id: 'snakeeyes-kids', name: '🧒 Kids Zone' },
         { type: 'movie', id: 'snakeeyes-docs', name: '🎥 Documentaries' },
-        { type: 'movie', id: 'snakeeyes-80s', name: '📼 1980s Movies' },
-        { type: 'movie', id: 'snakeeyes-90s', name: '📼 1990s Movies' },
-        { type: 'movie', id: 'snakeeyes-00s', name: '📼 2000s Movies' },
+        { type: 'movie', id: 'snakeeyes-80s', name: '📼 2010s Movies' },
+        { type: 'movie', id: 'snakeeyes-90s', name: '📼 2020s Movies' },
+        { type: 'movie', id: 'snakeeyes-00s', name: '📼 Recent Hits' },
         { type: 'series', id: 'snakeeyes-drama', name: '🎭 Drama Series' },
         { type: 'series', id: 'snakeeyes-comedy', name: '😂 Comedy Series' },
         { type: 'series', id: 'snakeeyes-horror-tv', name: '👻 Horror Series' },
@@ -62,66 +62,66 @@ const manifest = {
 const catalogConfig = {
     'snakeeyes-popular': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=1980-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['American movies 1980s', 'popular American films 1980s']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American movies 2010s', 'popular American films 2020s']
     },
     'snakeeyes-award': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=1980-01-01&sort_by=vote_average.desc&vote_count.gte=100',
-        fallbackQueries: ['award winning American movies 1980s', 'classic American films']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&release_date.gte=2010-01-01&sort_by=vote_average.desc&vote_count.gte=100',
+        fallbackQueries: ['award winning American movies 2010s', 'best modern American films']
     },
     'snakeeyes-kids': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&certification_country=US&certification.lte=G&with_original_language=en&region=US&with_genres=16,10751&release_date.gte=1980-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['Disney movies 1980s', 'American family movies 1980s', 'kids movies 1990s']
+        endpoint: 'discover/movie?include_adult=false&certification_country=US&certification.lte=G&with_original_language=en&region=US&with_genres=16,10751&release_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['Disney movies 2010s', 'American family movies 2020s', 'kids movies 2020s']
     },
     'snakeeyes-docs': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&release_date.gte=1980-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['American documentary films 1980s', 'history documentary 1990s', 'nature documentary 2000s']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&release_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American documentary films 2010s', 'history documentary 2020s', 'nature documentary 2020s']
     },
     'snakeeyes-80s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['American 1980s movies', 'classic 80s American films', '80s action movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2010-01-01&primary_release_date.lte=2019-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['American 2010s movies', 'popular 2010s American films', '2010s action movies']
     },
     'snakeeyes-90s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['American 1990s movies', 'classic 90s American films', '90s family movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2020-01-01&primary_release_date.lte=2029-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['American 2020s movies', 'popular 2020s American films', '2020s family movies']
     },
     'snakeeyes-00s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['American 2000s movies', 'classic 2000s films', '2000s action movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American recent movies', 'modern American films', 'popular American action movies']
     },
     'snakeeyes-drama': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=18',
-        fallbackQueries: ['American drama series 1980s', 'best American drama shows 1990s', 'award drama series 2000s']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc&with_genres=18',
+        fallbackQueries: ['American drama series 2010s', 'best American drama shows 2020s', 'award drama series 2020s']
     },
     'snakeeyes-comedy': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=35',
-        fallbackQueries: ['American comedy series 1980s', 'funny American shows 1990s', 'sitcoms 2000s']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc&with_genres=35',
+        fallbackQueries: ['American comedy series 2010s', 'funny American shows 2020s', 'sitcoms 2020s']
     },
     'snakeeyes-horror-tv': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=27',
-        fallbackQueries: ['American horror series 1980s', 'American scary shows 1990s', 'American supernatural horror series 2000s']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc&with_genres=27',
+        fallbackQueries: ['American horror series 2010s', 'American scary shows 2020s', 'American supernatural horror series 2020s']
     },
     'snakeeyes-supernatural': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=1980-01-01&sort_by=popularity.desc&with_genres=27,10765',
-        fallbackQueries: ['American supernatural horror shows 1980s', 'American paranormal series 1990s', 'American haunted shows 2000s']
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc&with_genres=27,10765',
+        fallbackQueries: ['American supernatural horror shows 2010s', 'American paranormal series 2020s', 'American haunted shows 2020s']
     },
     'snakeeyes-nolan': { type: 'person_movies', personId: '525' },
     'snakeeyes-tarantino': { type: 'person_movies', personId: '138' },
     'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
     'snakeeyes-horror': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&release_date.gte=1980-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['American horror movies 1980s', 'American scary movies 1990s', 'supernatural horror movies 2000s']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&release_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['American horror movies 2010s', 'American scary movies 2020s', 'supernatural horror movies 2020s']
     },
     'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
     'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
@@ -150,10 +150,9 @@ function cleanTitleForUsOnly(item) {
     const originalLang = (item.original_language || '').toLowerCase();
     const originCountry = Array.isArray(item.origin_country) ? item.origin_country.map(c => (c || '').toUpperCase()) : [];
     const hasUsOrigin = originCountry.includes('US');
-    const isEnglish = originalLang === 'en' || title.includes('John Wayne');
+    const isEnglish = originalLang === 'en';
     if (!title || title === 'Unknown') return null;
-    if (isEnglish && !hasUsOrigin) return item;
-    if (hasUsOrigin) return item;
+    if (isEnglish || hasUsOrigin) return item;
     return null;
 }
 
@@ -383,7 +382,7 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>American 1980s-2000s movies, kids, horror, drama, comedy, documentaries, and franchise picks.</p>
+  <p>Recent American 2010s-2020s movies, kids, horror, drama, comedy, documentaries, and franchise picks.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
@@ -391,7 +390,7 @@ app.get('/', (req, res) => {
       <li>🔥 Popular & Award Films</li>
       <li>🧒 Kids Zone</li>
       <li>🎥 Documentaries</li>
-      <li>📼 1980s, 1990s, 2000s Movies</li>
+      <li>📼 2010s, 2020s Movies</li>
       <li>🎭 Drama Series</li>
       <li>😂 Comedy Series</li>
       <li>👻 Horror Series</li>
@@ -489,6 +488,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.10 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.11 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
