@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.12 — broader recent catalog with 1980s, 1990s, 2020s, popular now, series, and horror picks
+// v3.13 — expanded top-rated movie and cartoon catalogs by decade and genre
 
 const express = require('express');
 const cors = require('cors');
@@ -14,23 +14,28 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.12.0',
+    version: '3.13.0',
     name: 'Snakeeyes Catalog',
-    description: 'Popular movies now, 1980s/1990s/2020s classics, series, horror, and franchise collections.',
+    description: 'Top-rated movies by decade, popular now, series, horror, action, drama, comedy, kids cartoons, and franchise collections.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie', 'series'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
         { type: 'movie', id: 'snakeeyes-popular', name: '🎬 Popular Movies Now' },
-        { type: 'movie', id: 'snakeeyes-1980s', name: '📼 Movies 1980s' },
-        { type: 'movie', id: 'snakeeyes-1990s', name: '📼 Movies 1990s' },
-        { type: 'movie', id: 'snakeeyes-2020s', name: '📼 Movies 2020s' },
-        { type: 'series', id: 'snakeeyes-series', name: '📺 Popular Series' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '👻 Horror Movies' },
+        { type: 'movie', id: 'snakeeyes-top-1980s', name: '⭐ Top Rated 1980s Movies' },
+        { type: 'movie', id: 'snakeeyes-top-1990s', name: '⭐ Top Rated 1990s Movies' },
+        { type: 'movie', id: 'snakeeyes-top-2000s', name: '⭐ Top Rated 2000s Movies' },
+        { type: 'movie', id: 'snakeeyes-top-2010s', name: '⭐ Top Rated 2010s Movies' },
+        { type: 'movie', id: 'snakeeyes-comedy-movies', name: '😂 Top Rated Comedy Movies' },
+        { type: 'movie', id: 'snakeeyes-action-movies', name: '💥 Top Rated Action Movies' },
+        { type: 'movie', id: 'snakeeyes-drama-movies', name: '🎭 Top Rated Drama Movies' },
+        { type: 'movie', id: 'snakeeyes-horror-top', name: '👻 Top Rated Horror Movies' },
+        { type: 'movie', id: 'snakeeyes-kids-cartoon', name: '🧸 Top Rated Cartoons 80s/90s' },
         { type: 'movie', id: 'snakeeyes-award', name: '🏆 Award Winning Films' },
         { type: 'movie', id: 'snakeeyes-kids', name: '🧒 Kids Zone' },
         { type: 'movie', id: 'snakeeyes-docs', name: '🎥 Documentaries' },
+        { type: 'series', id: 'snakeeyes-series', name: '📺 Popular Series' },
         { type: 'series', id: 'snakeeyes-drama', name: '🎭 Drama Series' },
         { type: 'series', id: 'snakeeyes-comedy', name: '😂 Comedy Series' },
         { type: 'series', id: 'snakeeyes-horror-tv', name: '👻 Horror Series' },
@@ -38,6 +43,7 @@ const manifest = {
         { type: 'movie', id: 'snakeeyes-nolan', name: '🎬 Christopher Nolan Collection' },
         { type: 'movie', id: 'snakeeyes-tarantino', name: '🎬 Quentin Tarantino Collection' },
         { type: 'movie', id: 'snakeeyes-leo', name: '🌟 Leonardo DiCaprio Films' },
+        { type: 'movie', id: 'snakeeyes-horror', name: '🔪 Horror Movies' },
         { type: 'movie', id: 'snakeeyes-insidious', name: '👁️ Insidious Collection' },
         { type: 'movie', id: 'snakeeyes-hellraiser', name: '😈 Hellraiser Collection' },
         { type: 'movie', id: 'snakeeyes-halloween', name: '🎃 Halloween Collection' },
@@ -66,25 +72,50 @@ const catalogConfig = {
         endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&sort_by=popularity.desc&release_date.gte=2020-01-01',
         fallbackQueries: ['popular American movies 2024', 'popular movies now 2024', 'latest action American films']
     },
-    'snakeeyes-1980s': {
+    'snakeeyes-top-1980s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['best 1980s American movies', 'classic 1980s action movies', '80s movies english language']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated 1980s American movies', 'best 80s movies English', 'classic 80s films']
     },
-    'snakeeyes-1990s': {
+    'snakeeyes-top-1990s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc',
-        fallbackQueries: ['best 1990s American movies', 'classic 1990s action movies', '90s movies english language']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated 1990s American movies', 'best 90s movies English', 'classic 90s films']
     },
-    'snakeeyes-2020s': {
+    'snakeeyes-top-2000s': {
         type: 'discover',
-        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2020-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['popular 2020s movies', 'modern American movies 2020s', 'new release movies']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated 2000s American movies', 'best 2000s movies English', 'popular 2000s action movies']
     },
-    'snakeeyes-series': {
+    'snakeeyes-top-2010s': {
         type: 'discover',
-        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc',
-        fallbackQueries: ['popular American series 2024', 'best American tv shows 2020s', 'new series 2024']
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&primary_release_date.gte=2010-01-01&primary_release_date.lte=2019-12-31&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated 2010s American movies', 'best 2010s movies English', 'popular 2010s action films']
+    },
+    'snakeeyes-comedy-movies': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=35&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated comedy movies English', 'funny American movies', 'best comedy films 2000s 2010s']
+    },
+    'snakeeyes-action-movies': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=28&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated action movies English', 'best action films American', 'modern action movies']
+    },
+    'snakeeyes-drama-movies': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=18&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated drama movies English', 'best drama films American', 'award-winning dramas']
+    },
+    'snakeeyes-horror-top': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=27&sort_by=vote_average.desc&vote_count.gte=20',
+        fallbackQueries: ['top rated horror movies English', 'best horror movies American', 'scary movies 1990s 2000s']
+    },
+    'snakeeyes-kids-cartoon': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=16&primary_release_date.gte=1980-01-01&primary_release_date.lte=1999-12-31&sort_by=vote_average.desc&vote_count.gte=10',
+        fallbackQueries: ['top rated cartoon movies 80s 90s', 'best animated films 80s 90s', 'Disney classics 80s 90s']
     },
     'snakeeyes-award': {
         type: 'discover',
@@ -100,6 +131,11 @@ const catalogConfig = {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&with_original_language=en&region=US&with_genres=99&release_date.gte=2010-01-01&sort_by=popularity.desc',
         fallbackQueries: ['American documentary films 2010s', 'history documentary 2020s', 'nature documentary 2020s']
+    },
+    'snakeeyes-series': {
+        type: 'discover',
+        endpoint: 'discover/tv?include_adult=false&with_original_language=en&first_air_date.gte=2010-01-01&sort_by=popularity.desc',
+        fallbackQueries: ['popular American series 2024', 'best American tv shows 2020s', 'new series 2024']
     },
     'snakeeyes-drama': {
         type: 'discover',
@@ -287,7 +323,7 @@ async function fetchMetas(catalogId, type) {
                     console.warn(`Fallback search failed for ${catalogId} query ${query}:`, err.message);
                 }
             }
-            return dedupeMetas(fallbackResults).slice(0, 20);
+            return dedupeMetas(fallbackResults).slice(0, 25);
         }
 
         return [];
@@ -320,7 +356,7 @@ async function fetchMetas(catalogId, type) {
                 }
             }
             const mapped = queryResults.map(movieToMeta);
-            return dedupeMetas(mapped).slice(0, 20);
+            return dedupeMetas(mapped).slice(0, 25);
         }
 
         return [];
@@ -331,7 +367,7 @@ async function fetchMetas(catalogId, type) {
         const cast = Array.isArray(data.crew) ? data.crew : Array.isArray(data.cast) ? data.cast : [];
         cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
         const filtered = cast.filter(item => cleanTitleForUsOnly(item));
-        const mapped = filtered.slice(0, 20).map(movieToMeta);
+        const mapped = filtered.slice(0, 25).map(movieToMeta);
         return dedupeMetas(mapped);
     }
 
@@ -340,7 +376,7 @@ async function fetchMetas(catalogId, type) {
         const cast = Array.isArray(data.cast) ? data.cast : [];
         cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
         const filtered = cast.filter(item => cleanTitleForUsOnly(item));
-        const mapped = filtered.slice(0, 20).map(tvToMeta);
+        const mapped = filtered.slice(0, 25).map(tvToMeta);
         return dedupeMetas(mapped);
     }
 
@@ -363,7 +399,7 @@ async function fetchMetas(catalogId, type) {
                 console.warn(`TV search failed for ${catalogId} query ${query}:`, err.message);
             }
         }
-        return results.slice(0, 20);
+        return results.slice(0, 25);
     }
 
     return [];
@@ -382,25 +418,28 @@ app.get('/', (req, res) => {
     h1 { color: #7b5cff; }
     .btn { background-color: #7b5cff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-size: 1.2em; display: inline-block; margin-top: 20px; }
     .btn:hover { background-color: #6245e0; }
-    .categories { margin-top: 40px; text-align: left; max-width: 850px; margin-left: auto; margin-right: auto; background: #2a2a2a; padding: 20px; border-radius: 10px; }
+    .categories { margin-top: 40px; text-align: left; max-width: 900px; margin-left: auto; margin-right: auto; background: #2a2a2a; padding: 20px; border-radius: 10px; }
     ul { columns: 2; }
   </style>
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>Popular movies now, classics from the 1980s and 1990s, 2020s hits, series, and horror collections.</p>
+  <p>Top-rated movies by decade, popular now, series, horror, action, drama, comedy, and kids cartoons.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
     <ul>
-      <li>🎬 Popular Movies Now</li>
-      <li>📼 Movies 1980s</li>
-      <li>📼 Movies 1990s</li>
-      <li>📼 Movies 2020s</li>
+      <li>�� Popular Movies Now</li>
+      <li>⭐ Top Rated 1980s Movies</li>
+      <li>⭐ Top Rated 1990s Movies</li>
+      <li>⭐ Top Rated 2000s Movies</li>
+      <li>⭐ Top Rated 2010s Movies</li>
+      <li>😂 Top Rated Comedy Movies</li>
+      <li>💥 Top Rated Action Movies</li>
+      <li>🎭 Top Rated Drama Movies</li>
+      <li>👻 Top Rated Horror Movies</li>
+      <li>🧸 Top Rated Cartoons 80s/90s</li>
       <li>📺 Popular Series</li>
-      <li>👻 Horror Movies</li>
-      <li>🏆 Award Winning Films</li>
-      <li>🎥 Documentaries</li>
       <li>🎭 Drama Series</li>
       <li>😂 Comedy Series</li>
       <li>👻 Horror Series</li>
@@ -491,6 +530,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.12 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.13 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
