@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.2 — Added Friday the 13th and Nightmare on Elm Street franchises
+// v3.3 — Fixed empty category filters and added recovery fallbacks for TV/movie discovery
 
 const express = require('express');
 const cors = require('cors');
@@ -14,7 +14,7 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.2.0',
+    version: '3.3.0',
     name: 'Snakeeyes Catalog',
     description: 'Custom catalogs for Movies, TV Shows, Directors, Decades, and Franchises.',
     logo: 'https://via.placeholder.com/150',
@@ -60,21 +60,57 @@ const manifest = {
 };
 
 const catalogConfig = {
-    'snakeeyes-popular': { type: 'discover', endpoint: 'movie/popular' },
-    'snakeeyes-award': { type: 'discover', endpoint: 'movie/top_rated' },
-    'snakeeyes-kids': { type: 'discover', endpoint: 'discover/movie?certification_country=US&certification.lte=G&sort_by=popularity.desc' },
-    'snakeeyes-docs': { type: 'discover', endpoint: 'discover/movie?with_genres=99&sort_by=popularity.desc' },
-    'snakeeyes-80s': { type: 'discover', endpoint: 'discover/movie?primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc' },
-    'snakeeyes-90s': { type: 'discover', endpoint: 'discover/movie?primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc' },
-    'snakeeyes-00s': { type: 'discover', endpoint: 'discover/movie?primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=popularity.desc' },
-    'snakeeyes-drama': { type: 'discover', endpoint: 'discover/tv?with_genres=18&sort_by=popularity.desc' },
-    'snakeeyes-comedy': { type: 'discover', endpoint: 'discover/tv?with_genres=35&sort_by=popularity.desc' },
-    'snakeeyes-horror-tv': { type: 'discover', endpoint: 'discover/tv?with_genres=9648&sort_by=popularity.desc' },
-    'snakeeyes-supernatural': { type: 'discover', endpoint: 'discover/tv?with_genres=10765&sort_by=popularity.desc' },
+    'snakeeyes-popular': { type: 'discover', endpoint: 'movie/popular', fallbackQueries: ['popular movies'] },
+    'snakeeyes-award': { type: 'discover', endpoint: 'movie/top_rated', fallbackQueries: ['award winning movies'] },
+    'snakeeyes-kids': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_genres=10751,16&sort_by=popularity.desc',
+        fallbackQueries: ['family movies', 'kids movies', 'animated movies']
+    },
+    'snakeeyes-docs': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&with_genres=99&sort_by=popularity.desc',
+        fallbackQueries: ['documentary films', 'nature documentary', 'history documentary']
+    },
+    'snakeeyes-80s': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=1980-01-01&primary_release_date.lte=1989-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['1980s movies', 'classic 80s films']
+    },
+    'snakeeyes-90s': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=1990-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['1990s movies', 'classic 90s films']
+    },
+    'snakeeyes-00s': {
+        type: 'discover',
+        endpoint: 'discover/movie?include_adult=false&primary_release_date.gte=2000-01-01&primary_release_date.lte=2009-12-31&sort_by=popularity.desc',
+        fallbackQueries: ['2000s movies', 'classic 2000s movies']
+    },
+    'snakeeyes-drama': {
+        type: 'discover',
+        endpoint: 'discover/tv?include_adult=false&with_genres=18&sort_by=popularity.desc',
+        fallbackQueries: ['drama series', 'best drama shows']
+    },
+    'snakeeyes-comedy': {
+        type: 'discover',
+        endpoint: 'discover/tv?include_adult=false&with_genres=35&sort_by=popularity.desc',
+        fallbackQueries: ['comedy series', 'funny shows']
+    },
+    'snakeeyes-horror-tv': {
+        type: 'discover',
+        endpoint: 'discover/tv?include_adult=false&with_genres=27&sort_by=popularity.desc',
+        fallbackQueries: ['horror series', 'supernatural horror series']
+    },
+    'snakeeyes-supernatural': {
+        type: 'discover',
+        endpoint: 'discover/tv?include_adult=false&with_genres=27,10765&sort_by=popularity.desc',
+        fallbackQueries: ['supernatural series', 'paranormal shows', 'supernatural horror shows']
+    },
     'snakeeyes-nolan': { type: 'person_movies', personId: '525' },
     'snakeeyes-tarantino': { type: 'person_movies', personId: '138' },
     'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
-    'snakeeyes-horror': { type: 'discover', endpoint: 'discover/movie?with_genres=27&sort_by=popularity.desc' },
+    'snakeeyes-horror': { type: 'discover', endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc', fallbackQueries: ['horror movies', 'scary films'] },
     'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
     'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
     'snakeeyes-halloween': { type: 'collection', collectionId: '1262', fallbackQueries: ['Halloween', 'Halloween Kills', 'Halloween Ends'] },
@@ -188,10 +224,40 @@ async function fetchMetas(catalogId, type) {
     if (!config) return [];
 
     if (config.type === 'discover') {
-        const data = await fetchTmdb(config.endpoint);
-        const results = Array.isArray(data.results) ? data.results : [];
-        const metas = type === 'series' ? results.map(tvToMeta) : results.map(movieToMeta);
-        return dedupeMetas(metas);
+        let results = [];
+        try {
+            const data = await fetchTmdb(config.endpoint);
+            results = Array.isArray(data.results) ? data.results : [];
+        } catch (err) {
+            console.warn(`Discover fetch failed for ${catalogId}:`, err.message);
+        }
+
+        let metas = type === 'series' ? results.map(tvToMeta) : results.map(movieToMeta);
+        let deduped = dedupeMetas(metas);
+        if (deduped.length > 0) return deduped;
+
+        if (Array.isArray(config.fallbackQueries) && config.fallbackQueries.length > 0) {
+            const fallbackResults = [];
+            const seen = new Set();
+            for (const query of config.fallbackQueries) {
+                try {
+                    const endpoint = type === 'series' ? 'search/tv' : 'search/movie';
+                    const data = await fetchTmdb(endpoint, { query, include_adult: false });
+                    const items = Array.isArray(data.results) ? data.results : [];
+                    for (const item of items) {
+                        const meta = type === 'series' ? tvToMeta(item) : movieToMeta(item);
+                        if (!meta || !meta.id || seen.has(meta.id)) continue;
+                        seen.add(meta.id);
+                        fallbackResults.push(meta);
+                    }
+                } catch (err) {
+                    console.warn(`Fallback search failed for ${catalogId} query ${query}:`, err.message);
+                }
+            }
+            return dedupeMetas(fallbackResults).slice(0, 20);
+        }
+
+        return [];
     }
 
     if (config.type === 'collection') {
@@ -384,6 +450,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.2 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.3 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
