@@ -1,6 +1,6 @@
 // index.js
 // Snakeeyes Stremio Catalog Addon — Node.js/Express for Render.com
-// v3.6 — Cleaned to only the requested categories: 80s, 90s, 00s, Kids, Docs, Drama, Comedy, Horror, Supernatural Horror
+// v3.7 — Restored franchise collections while keeping your requested categories and trailer support for movie/series meta
 
 const express = require('express');
 const cors = require('cors');
@@ -14,28 +14,54 @@ const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const manifest = {
     id: 'community.snakeeyes.catalog',
-    version: '3.6.0',
+    version: '3.7.0',
     name: 'Snakeeyes Catalog',
-    description: '1980s, 1990s, 2000s movies, kids, documentaries, drama, comedy, horror, and supernatural horror.',
+    description: 'Custom catalogs for Movies, TV Shows, Directors, Decades, Franchises, Horror, Drama, Comedy, Kids, and Documentaries.',
     logo: 'https://via.placeholder.com/150',
     resources: ['catalog', 'meta'],
     types: ['movie', 'series'],
     idPrefixes: ['tt', 'tmdb:'],
     catalogs: [
+        { type: 'movie', id: 'snakeeyes-popular', name: '🔥 Popular Movies' },
+        { type: 'movie', id: 'snakeeyes-award', name: '🏆 Award Winning Films' },
+        { type: 'movie', id: 'snakeeyes-kids', name: '🧒 Kids Zone' },
+        { type: 'movie', id: 'snakeeyes-docs', name: '🎥 Documentaries' },
         { type: 'movie', id: 'snakeeyes-80s', name: '📼 1980s Movies' },
         { type: 'movie', id: 'snakeeyes-90s', name: '📼 1990s Movies' },
         { type: 'movie', id: 'snakeeyes-00s', name: '📼 2000s Movies' },
-        { type: 'movie', id: 'snakeeyes-kids', name: '🧒 Kids Zone' },
-        { type: 'movie', id: 'snakeeyes-docs', name: '🎥 Documentaries' },
         { type: 'series', id: 'snakeeyes-drama', name: '🎭 Drama Series' },
         { type: 'series', id: 'snakeeyes-comedy', name: '😂 Comedy Series' },
         { type: 'series', id: 'snakeeyes-horror-tv', name: '👻 Horror Series' },
         { type: 'series', id: 'snakeeyes-supernatural', name: '🔮 Supernatural Horror Shows' },
-        { type: 'movie', id: 'snakeeyes-horror', name: '🔪 Horror Movies' }
+        { type: 'movie', id: 'snakeeyes-nolan', name: '🎬 Christopher Nolan Collection' },
+        { type: 'movie', id: 'snakeeyes-tarantino', name: '🎬 Quentin Tarantino Collection' },
+        { type: 'movie', id: 'snakeeyes-leo', name: '🌟 Leonardo DiCaprio Films' },
+        { type: 'movie', id: 'snakeeyes-horror', name: '🔪 Horror Movies' },
+        { type: 'movie', id: 'snakeeyes-insidious', name: '👁️ Insidious Collection' },
+        { type: 'movie', id: 'snakeeyes-hellraiser', name: '😈 Hellraiser Collection' },
+        { type: 'movie', id: 'snakeeyes-halloween', name: '🎃 Halloween Collection' },
+        { type: 'movie', id: 'snakeeyes-predators', name: '🦷 Predator Collection' },
+        { type: 'movie', id: 'snakeeyes-friday13', name: '🗡️ Friday the 13th Collection' },
+        { type: 'movie', id: 'snakeeyes-nightmare', name: '😱 Nightmare on Elm Street Collection' },
+        { type: 'movie', id: 'snakeeyes-lotr', name: '💍 Lord of the Rings' },
+        { type: 'movie', id: 'snakeeyes-johnwick', name: '🐶 John Wick Collection' },
+        { type: 'movie', id: 'snakeeyes-transformers', name: '🤖 Transformers Collection' },
+        { type: 'movie', id: 'snakeeyes-xmen', name: '⚡ X-Men Collection' },
+        { type: 'movie', id: 'snakeeyes-starwars', name: '⭐ Star Wars Collection' },
+        { type: 'movie', id: 'snakeeyes-fastnfurious', name: '🚗 Fast & Furious Collection' },
+        { type: 'movie', id: 'snakeeyes-superman', name: '🦸 Superman Films' },
+        { type: 'movie', id: 'snakeeyes-batman', name: '🦇 Batman Films' },
+        { type: 'series', id: 'snakeeyes-starwars-tv', name: '⭐ Star Wars TV Shows' },
+        { type: 'series', id: 'snakeeyes-xmen-tv', name: '⚡ X-Men Animated Series' },
+        { type: 'series', id: 'snakeeyes-transformers-tv', name: '🤖 Transformers Animated' },
+        { type: 'series', id: 'snakeeyes-batman-tv', name: '🦇 Batman TV Series' },
+        { type: 'series', id: 'snakeeyes-superman-tv', name: '🦸 Superman TV Series' }
     ]
 };
 
 const catalogConfig = {
+    'snakeeyes-popular': { type: 'discover', endpoint: 'movie/popular', fallbackQueries: ['popular movies'] },
+    'snakeeyes-award': { type: 'discover', endpoint: 'movie/top_rated', fallbackQueries: ['award winning movies'] },
     'snakeeyes-kids': {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&with_genres=16,10751&sort_by=popularity.desc',
@@ -81,11 +107,33 @@ const catalogConfig = {
         endpoint: 'discover/tv?include_adult=false&with_genres=27,10765&sort_by=popularity.desc',
         fallbackQueries: ['supernatural horror shows', 'paranormal series', 'haunted tv shows']
     },
+    'snakeeyes-nolan': { type: 'person_movies', personId: '525' },
+    'snakeeyes-tarantino': { type: 'person_movies', personId: '138' },
+    'snakeeyes-leo': { type: 'person_movies', personId: '6193' },
     'snakeeyes-horror': {
         type: 'discover',
         endpoint: 'discover/movie?include_adult=false&with_genres=27&sort_by=popularity.desc',
         fallbackQueries: ['horror movies', 'scary films', 'supernatural horror movies']
-    }
+    },
+    'snakeeyes-insidious': { type: 'collection', collectionId: '228446', fallbackQueries: ['Insidious'] },
+    'snakeeyes-hellraiser': { type: 'collection', collectionId: '8916', fallbackQueries: ['Hellraiser'] },
+    'snakeeyes-halloween': { type: 'collection', collectionId: '1262', fallbackQueries: ['Halloween', 'Halloween Kills', 'Halloween Ends'] },
+    'snakeeyes-predators': { type: 'collection', collectionId: '399', fallbackQueries: ['Predator', 'Predators'] },
+    'snakeeyes-friday13': { type: 'collection', collectionId: '9735', fallbackQueries: ['Friday the 13th', 'Friday the 13th Part 2'] },
+    'snakeeyes-nightmare': { type: 'collection', collectionId: '8581', fallbackQueries: ['Nightmare on Elm Street', 'A Nightmare on Elm Street'] },
+    'snakeeyes-lotr': { type: 'collection', collectionId: '119', fallbackQueries: ['The Lord of the Rings'] },
+    'snakeeyes-johnwick': { type: 'collection', collectionId: '404609', fallbackQueries: ['John Wick'] },
+    'snakeeyes-transformers': { type: 'collection', collectionId: '8650', fallbackQueries: ['Transformers'] },
+    'snakeeyes-xmen': { type: 'collection', collectionId: '748', fallbackQueries: ['X-Men'] },
+    'snakeeyes-starwars': { type: 'collection', collectionId: '10', fallbackQueries: ['Star Wars'] },
+    'snakeeyes-fastnfurious': { type: 'collection', collectionId: '9485', fallbackQueries: ['Fast & Furious', 'The Fast and the Furious'] },
+    'snakeeyes-superman': { type: 'collection', collectionId: '863151', fallbackQueries: ['Superman', 'Man of Steel', 'Superman Returns'] },
+    'snakeeyes-batman': { type: 'collection', collectionId: '948485', fallbackQueries: ['Batman', 'The Dark Knight', 'Batman Begins'] },
+    'snakeeyes-starwars-tv': { type: 'search_tv', queries: ['The Mandalorian', 'Andor', 'Obi-Wan Kenobi', 'The Book of Boba Fett', 'Ahsoka', 'Star Wars The Clone Wars', 'Star Wars Rebels', 'The Bad Batch'] },
+    'snakeeyes-xmen-tv': { type: 'search_tv', queries: ['X-Men The Animated Series', 'X-Men Evolution', 'Wolverine and the X-Men', 'X-Men 97'] },
+    'snakeeyes-transformers-tv': { type: 'search_tv', queries: ['Transformers Generation 1', 'Transformers Animated', 'Transformers Prime', 'Transformers Robots in Disguise', 'Transformers Cyberverse'] },
+    'snakeeyes-batman-tv': { type: 'search_tv', queries: ['Batman The Animated Series', 'The Batman', 'Batman Beyond', 'Gotham', 'Batwoman', 'Batman Caped Crusader'] },
+    'snakeeyes-superman-tv': { type: 'search_tv', queries: ['Superman The Animated Series', 'Smallville', 'Superman and Lois', 'My Adventures with Superman'] }
 };
 
 function normalizeTitle(item) {
@@ -216,6 +264,71 @@ async function fetchMetas(catalogId, type) {
         return [];
     }
 
+    if (config.type === 'collection') {
+        try {
+            const data = await fetchTmdb(`collection/${config.collectionId}`);
+            const parts = Array.isArray(data.parts) ? data.parts : [];
+            const mapped = parts.map(movieToMeta);
+            const deduped = dedupeMetas(mapped);
+            if (deduped.length > 0) return deduped;
+        } catch (err) {
+            console.warn(`Collection ${catalogId} lookup failed:`, err.message);
+        }
+
+        if (Array.isArray(config.fallbackQueries) && config.fallbackQueries.length > 0) {
+            const queryResults = [];
+            for (const query of config.fallbackQueries) {
+                try {
+                    const data = await fetchTmdb('search/movie', { query });
+                    const items = Array.isArray(data.results) ? data.results : [];
+                    queryResults.push(...items);
+                } catch (err) {
+                    console.warn(`Fallback movie search failed for ${catalogId}:`, err.message);
+                }
+            }
+            const mapped = queryResults.map(movieToMeta);
+            return dedupeMetas(mapped).slice(0, 20);
+        }
+
+        return [];
+    }
+
+    if (config.type === 'person_movies') {
+        const data = await fetchTmdb(`person/${config.personId}/movie_credits`);
+        const cast = Array.isArray(data.crew) ? data.crew : Array.isArray(data.cast) ? data.cast : [];
+        cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        const mapped = cast.slice(0, 20).map(movieToMeta);
+        return dedupeMetas(mapped);
+    }
+
+    if (config.type === 'person_tv') {
+        const data = await fetchTmdb(`person/${config.personId}/tv_credits`);
+        const cast = Array.isArray(data.cast) ? data.cast : [];
+        cast.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        const mapped = cast.slice(0, 20).map(tvToMeta);
+        return dedupeMetas(mapped);
+    }
+
+    if (config.type === 'search_tv') {
+        const results = [];
+        const seen = new Set();
+        for (const query of config.queries || []) {
+            try {
+                const data = await fetchTmdb('search/tv', { query });
+                const items = Array.isArray(data.results) ? data.results : [];
+                for (const item of items) {
+                    const meta = tvToMeta(item);
+                    if (!meta || !meta.id || seen.has(meta.id)) continue;
+                    seen.add(meta.id);
+                    results.push(meta);
+                }
+            } catch (err) {
+                console.warn(`TV search failed for ${catalogId} query ${query}:`, err.message);
+            }
+        }
+        return results.slice(0, 20);
+    }
+
     return [];
 }
 
@@ -238,21 +351,34 @@ app.get('/', (req, res) => {
 </head>
 <body>
   <h1>🐍 Snakeeyes Stremio Catalog</h1>
-  <p>1980s, 1990s, 2000s movies, kids, documentaries, drama, comedy, horror, and supernatural horror.</p>
+  <p>Movies, TV shows, decades, kids, horror, supernatural horror, docs, drama, comedy, and franchise collections.</p>
   <a class="btn" href="stremio://${host}/manifest.json">Install in Stremio</a>
   <div class="categories">
     <h3>What's Included:</h3>
     <ul>
-      <li>📼 1980s Movies</li>
-      <li>📼 1990s Movies</li>
-      <li>📼 2000s Movies</li>
+      <li>🔥 Popular & Award Films</li>
       <li>🧒 Kids Zone</li>
       <li>🎥 Documentaries</li>
+      <li>📼 1980s, 1990s, 2000s Movies</li>
       <li>🎭 Drama Series</li>
       <li>😂 Comedy Series</li>
       <li>👻 Horror Series</li>
       <li>🔮 Supernatural Horror Shows</li>
       <li>🔪 Horror Movies</li>
+      <li>👁️ Insidious Collection</li>
+      <li>😈 Hellraiser Collection</li>
+      <li>🎃 Halloween Collection</li>
+      <li>🦷 Predator Collection</li>
+      <li>🗡️ Friday the 13th Collection</li>
+      <li>😱 Nightmare on Elm Street Collection</li>
+      <li>💍 Lord of the Rings</li>
+      <li>🐶 John Wick Collection</li>
+      <li>🤖 Transformers Collection</li>
+      <li>⚡ X-Men Collection</li>
+      <li>⭐ Star Wars Collection</li>
+      <li>🚗 Fast & Furious Collection</li>
+      <li>🦸 Superman Films</li>
+      <li>🦇 Batman Films</li>
     </ul>
   </div>
 </body>
@@ -331,6 +457,6 @@ app.get('/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Snakeeyes Catalog v3.6 running on port ${PORT}`);
+    console.log(`Snakeeyes Catalog v3.7 running on port ${PORT}`);
     if (!TMDB_API_KEY) console.warn('WARNING: TMDB_API_KEY is not set');
 });
